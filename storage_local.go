@@ -14,6 +14,17 @@ type LocalStorage struct {
 	tmpSubdir string
 }
 
+func ensureDirExists(dir string) error {
+	_, err := os.Lstat(dir)
+	if err != nil {
+		fi, err := os.Lstat(path.Dir(dir))
+		if err != nil { return err }
+		err = os.Mkdir(dir, fi.Mode().Perm())
+		if err != nil { return err }
+	}
+	return nil
+}
+
 func NewLocalStorage(config *conf.ConfigFile) (*LocalStorage, error) {
 	storageDir, err := config.GetString("storage", "dir")
 	if err != nil {
@@ -23,6 +34,13 @@ func NewLocalStorage(config *conf.ConfigFile) (*LocalStorage, error) {
 	ls := new(LocalStorage)
 	ls.storageDir = storageDir
 	ls.tmpSubdir = path.Join(storageDir, ".asink-tmpdir")
+
+	//make sure the base directory and tmp subdir exist
+	err = ensureDirExists(ls.storageDir)
+	if err != nil { return nil, err}
+	err = ensureDirExists(ls.tmpSubdir)
+	if err != nil { return nil, err}
+
 	return ls, nil
 }
 
