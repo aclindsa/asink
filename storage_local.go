@@ -62,12 +62,12 @@ func (ls *LocalStorage) copyToTmp(src string) (string, error) {
 func (ls *LocalStorage) Put(filename string, hash string) (e error) {
 	tmpfile, err := ls.copyToTmp(filename)
 	if err != nil { return err }
-	defer func() {
-		err := os.Remove(tmpfile)
-		if err != nil && e == nil { e = err }
-	}()
 
 	err = os.Rename(tmpfile, path.Join(ls.storageDir, hash))
+	if err != nil {
+		err := os.Remove(tmpfile)
+		if err != nil { return err }
+	}
 
 	return nil
 }
