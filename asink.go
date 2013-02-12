@@ -5,7 +5,6 @@ import (
 	"flag"
 	"path"
 	"os/user"
-	"github.com/howeyc/fsnotify"
 	"code.google.com/p/goconf/conf"
 )
 
@@ -48,36 +47,20 @@ func main() {
 	fmt.Println(cachedir)
 	fmt.Println(storage)
 
-	setup_watchers()
-}
-
-func setup_watchers() {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		fmt.Println("Failed to create fsnotify watcher")
-		return
-	}
-	fmt.Println("Created new fsnotify watcher!")
-
-	err = watcher.Watch("/home/aclindsa/.asink")
-	if err != nil {
-		fmt.Println("Failed to watch /home/aclindsa/.asink")
-		return
-	}
+	fileUpdates := make(chan *Event)
+	go StartWatching(syncdir, fileUpdates)
 
 	for {
-		select {
-		case ev := <-watcher.Event:
-			fmt.Println("event:", ev)
-			hash, err := HashFile(ev.Name)
-			//TODO if creating a directory, start watching it (and then initiate a full scan of it so we're sure nothing slipped through the cracks)
-			if err != nil {
-				fmt.Println(err)
-			} else  {
-				fmt.Println(hash)
-			}
-		case err := <-watcher.Error:
-			fmt.Println("error:", err)
-		}
+		event := <- fileUpdates
+		ProcessEvent(storage, event)
+	}
+}
+
+func ProcessEvent(storage Storage, event *Event) {
+	fmt.Println(event)
+
+	if event.IsUpdate() {
+		err := storage.Put(event.Path, event.Hash)
+		if err != nil { panic(err) }
 	}
 }

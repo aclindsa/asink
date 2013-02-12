@@ -10,7 +10,7 @@ type Storage interface {
 	Get(filename string, hash string) error
 }
 
-func GetStorage(config *conf.ConfigFile) (*Storage, error) {
+func GetStorage(config *conf.ConfigFile) (Storage, error) {
 	storageMethod, err := config.GetString("storage", "method")
 	if err != nil {
 		return nil, errors.New("Error: storage method not specified in config file.")
@@ -28,5 +28,5 @@ func GetStorage(config *conf.ConfigFile) (*Storage, error) {
 			return nil, errors.New("Error: storage method '" + storageMethod + "' not implemented.")
 	}
 
-	return &storage, nil
+	return storage, nil
 }
