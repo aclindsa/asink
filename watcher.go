@@ -30,7 +30,9 @@ func StartWatching(watchDir string, fileUpdates chan *Event) {
 			event.Path = ev.Name
 			if event.IsUpdate() {
 				event.Hash, err = HashFile(ev.Name)
-				if err != nil { continue }
+				if err != nil {
+					continue
+				}
 			} else {
 				event.Hash = ""
 			}

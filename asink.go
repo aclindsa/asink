@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"flag"
-	"path"
-	"os/user"
 	"code.google.com/p/goconf/conf"
+	"flag"
+	"fmt"
+	"os/user"
+	"path"
 )
 
 var configFileName string
@@ -17,7 +17,7 @@ func init() {
 	u, err := user.Current()
 	if err == nil {
 		userHomeDir = u.HomeDir
-	} 
+	}
 
 	flag.StringVar(&configFileName, "config", path.Join(userHomeDir, ".asink", "config"), config_usage)
 	flag.StringVar(&configFileName, "c", path.Join(userHomeDir, ".asink", "config"), config_usage+" (shorthand)")
@@ -51,7 +51,7 @@ func main() {
 	go StartWatching(syncdir, fileUpdates)
 
 	for {
-		event := <- fileUpdates
+		event := <-fileUpdates
 		ProcessEvent(storage, event)
 	}
 }
@@ -61,6 +61,8 @@ func ProcessEvent(storage Storage, event *Event) {
 
 	if event.IsUpdate() {
 		err := storage.Put(event.Path, event.Hash)
-		if err != nil { panic(err) }
+		if err != nil {
+			panic(err)
+		}
 	}
 }

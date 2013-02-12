@@ -3,7 +3,7 @@ package main
 type EventType uint32
 
 const (
-	UPDATE  = 1 << iota
+	UPDATE = 1 << iota
 	DELETE
 )
 
@@ -14,9 +14,9 @@ type Event struct {
 }
 
 func (e Event) IsUpdate() bool {
-	return e.Type & UPDATE == UPDATE
+	return e.Type&UPDATE == UPDATE
 }
 
 func (e Event) IsDelete() bool {
-	return e.Type & DELETE == DELETE
+	return e.Type&DELETE == DELETE
 }
