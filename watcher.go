@@ -4,6 +4,7 @@ import (
 	"github.com/howeyc/fsnotify"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func StartWatching(watchDir string, fileUpdates chan *Event) {
@@ -45,7 +46,10 @@ func StartWatching(watchDir string, fileUpdates chan *Event) {
 					panic("Unknown fsnotify event type")
 				}
 
+				event.Status = NOTICED
 				event.Path = ev.Name
+				event.Timestamp = time.Now()
+
 				if event.IsUpdate() {
 					event.Hash, err = HashFile(ev.Name)
 					if err != nil {
