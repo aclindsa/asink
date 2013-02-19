@@ -25,11 +25,14 @@ const (
 )
 
 type Event struct {
+	Id        int64
+	LocalId   int64
 	Type      EventType
 	Status    EventStatus
 	Path      string
 	Hash      string
 	Timestamp time.Time
+	InDB      bool //defaults to false
 }
 
 func (e Event) IsUpdate() bool {

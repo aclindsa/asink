@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/goconf/conf"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -12,21 +11,6 @@ import (
 type LocalStorage struct {
 	storageDir string
 	tmpSubdir  string
-}
-
-func ensureDirExists(dir string) error {
-	_, err := os.Lstat(dir)
-	if err != nil {
-		fi, err := os.Lstat(path.Dir(dir))
-		if err != nil {
-			return err
-		}
-		err = os.Mkdir(dir, fi.Mode().Perm())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func NewLocalStorage(config *conf.ConfigFile) (*LocalStorage, error) {
@@ -52,29 +36,8 @@ func NewLocalStorage(config *conf.ConfigFile) (*LocalStorage, error) {
 	return ls, nil
 }
 
-func (ls *LocalStorage) copyToTmp(src string) (string, error) {
-	infile, err := os.Open(src)
-	if err != nil {
-		return "", err
-	}
-	defer infile.Close()
-
-	outfile, err := ioutil.TempFile(ls.tmpSubdir, "asink")
-	if err != nil {
-		return "", err
-	}
-	defer outfile.Close()
-
-	_, err = io.Copy(outfile, infile)
-	if err != nil {
-		return "", err
-	}
-
-	return outfile.Name(), nil
-}
-
 func (ls *LocalStorage) Put(filename string, hash string) (e error) {
-	tmpfile, err := ls.copyToTmp(filename)
+	tmpfile, err := copyToTmp(filename, ls.tmpSubdir)
 	if err != nil {
 		return err
 	}

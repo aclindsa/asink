@@ -50,16 +50,6 @@ func StartWatching(watchDir string, fileUpdates chan *Event) {
 				event.Path = ev.Name
 				event.Timestamp = time.Now()
 
-				if event.IsUpdate() {
-					event.Hash, err = HashFile(ev.Name)
-					if err != nil {
-						panic("file deleted already?")
-						continue
-					}
-				} else {
-					event.Hash = ""
-				}
-
 				fileUpdates <- event
 
 			case err := <-watcher.Error:
