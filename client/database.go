@@ -1,6 +1,7 @@
 package main
 
 import (
+	"asink"
 	"code.google.com/p/goconf/conf"
 	"database/sql"
 	"errors"
@@ -43,12 +44,12 @@ func GetAndInitDB(config *conf.ConfigFile) (*sql.DB, error) {
 	return db, nil
 }
 
-func DatabaseAddEvent(db *sql.DB, e *Event) error {
+func DatabaseAddEvent(db *sql.DB, e *asink.Event) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
-	result, err := tx.Exec("INSERT INTO events (id, type, status, path, hash, timestamp, permissions) VALUES (?,?,?,?,?,?,?);", e.Id, e.Type, e.Status, e.Path, e.Hash, e.Timestamp.UnixNano(), 0)
+	result, err := tx.Exec("INSERT INTO events (id, type, status, path, hash, timestamp, permissions) VALUES (?,?,?,?,?,?,?);", e.Id, e.Type, e.Status, e.Path, e.Hash, e.Timestamp, 0)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func DatabaseAddEvent(db *sql.DB, e *Event) error {
 	return nil
 }
 
-func DatabaseUpdateEvent(db *sql.DB, e *Event) error {
+func DatabaseUpdateEvent(db *sql.DB, e *asink.Event) error {
 	if !e.InDB {
 		return errors.New("Attempting to update an event in the database which hasn't been previously added.")
 	}
@@ -75,7 +76,7 @@ func DatabaseUpdateEvent(db *sql.DB, e *Event) error {
 	if err != nil {
 		return err
 	}
-	result, err := tx.Exec("UPDATE events SET id=?, type=?, status=?, path=?, hash=?, timestamp=?, permissions=? WHERE localid=?;", e.Id, e.Type, e.Status, e.Path, e.Hash, e.Timestamp.UnixNano(), 0, e.LocalId)
+	result, err := tx.Exec("UPDATE events SET id=?, type=?, status=?, path=?, hash=?, timestamp=?, permissions=? WHERE localid=?;", e.Id, e.Type, e.Status, e.Path, e.Hash, e.Timestamp, 0, e.LocalId)
 	if err != nil {
 		return err
 	}

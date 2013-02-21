@@ -1,13 +1,20 @@
 package main
 
 import (
+	"asink"
+	"asink/util"
+	"bytes"
 	"code.google.com/p/goconf/conf"
 	"database/sql"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
+	"strconv"
 )
 
 type AsinkGlobals struct {
@@ -17,6 +24,8 @@ type AsinkGlobals struct {
 	tmpDir         string
 	db             *sql.DB
 	storage        Storage
+	server         string
+	port           int
 }
 
 var globals AsinkGlobals
@@ -56,15 +65,15 @@ func main() {
 	globals.tmpDir, err = config.GetString("local", "tmpdir")
 
 	//make sure all the necessary directories exist
-	err = ensureDirExists(globals.syncDir)
+	err = util.EnsureDirExists(globals.syncDir)
 	if err != nil {
 		panic(err)
 	}
-	err = ensureDirExists(globals.cacheDir)
+	err = util.EnsureDirExists(globals.cacheDir)
 	if err != nil {
 		panic(err)
 	}
-	err = ensureDirExists(globals.tmpDir)
+	err = util.EnsureDirExists(globals.tmpDir)
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +85,10 @@ func main() {
 	fmt.Println(globals.storage)
 	//TODO FIXME REMOVEME
 
-	fileUpdates := make(chan *Event)
+	globals.server, err = config.GetString("server", "host")
+	globals.port, err = config.GetInt("server", "port")
+
+	fileUpdates := make(chan *asink.Event)
 	go StartWatching(globals.syncDir, fileUpdates)
 
 	globals.db, err = GetAndInitDB(config)
@@ -91,7 +103,7 @@ func main() {
 	}
 }
 
-func ProcessEvent(globals AsinkGlobals, event *Event) {
+func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 	//add to database
 	err := DatabaseAddEvent(globals.db, event)
 	if err != nil {
@@ -100,11 +112,11 @@ func ProcessEvent(globals AsinkGlobals, event *Event) {
 
 	if event.IsUpdate() {
 		//copy to tmp
-		tmpfilename, err := copyToTmp(event.Path, globals.tmpDir)
+		tmpfilename, err := util.CopyToTmp(event.Path, globals.tmpDir)
 		if err != nil {
 			panic(err)
 		}
-		event.Status |= COPIED_TO_TMP
+		event.Status |= asink.COPIED_TO_TMP
 
 		//get the file's hash
 		hash, err := HashFile(tmpfilename)
@@ -112,7 +124,7 @@ func ProcessEvent(globals AsinkGlobals, event *Event) {
 		if err != nil {
 			panic(err)
 		}
-		event.Status |= HASHED
+		event.Status |= asink.HASHED
 
 		//rename to local cache w/ filename=hash
 		err = os.Rename(tmpfilename, path.Join(globals.cacheDir, event.Hash))
@@ -122,7 +134,7 @@ func ProcessEvent(globals AsinkGlobals, event *Event) {
 				panic(err)
 			}
 		}
-		event.Status |= CACHED
+		event.Status |= asink.CACHED
 
 		//update database
 		err = DatabaseUpdateEvent(globals.db, event)
@@ -135,7 +147,7 @@ func ProcessEvent(globals AsinkGlobals, event *Event) {
 		if err != nil {
 			panic(err)
 		}
-		event.Status |= UPLOADED
+		event.Status |= asink.UPLOADED
 
 		//update database again
 		err = DatabaseUpdateEvent(globals.db, event)
@@ -144,7 +156,46 @@ func ProcessEvent(globals AsinkGlobals, event *Event) {
 		}
 
 	}
-	fmt.Println(event)
 
-	//TODO notify server of new file
+	//finally, send it off to the server
+	url := "http://" + globals.server + ":" + strconv.Itoa(int(globals.port)) + "/events/"
+
+	//construct json payload
+	events := asink.EventList{
+		Events: []*asink.Event{event},
+	}
+	b, err := json.Marshal(events)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(b))
+
+	//actually make the request
+	resp, err := http.Post(url, "application/json", bytes.NewReader(b))
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	//check to make sure request succeeded
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	var apistatus asink.APIResponse
+	err = json.Unmarshal(body, &apistatus)
+	if err != nil {
+		panic(err) //TODO handle sensibly
+	}
+	if apistatus.Status != "success" {
+		panic("Status not success") //TODO handle sensibly
+	}
+	fmt.Println(apistatus)
+
+	event.Status |= asink.ON_SERVER
+	err = DatabaseUpdateEvent(globals.db, event)
+	if err != nil {
+		panic(err)
+	}
 }

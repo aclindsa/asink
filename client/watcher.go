@@ -1,13 +1,14 @@
 package main
 
 import (
+	"asink"
 	"github.com/howeyc/fsnotify"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-func StartWatching(watchDir string, fileUpdates chan *Event) {
+func StartWatching(watchDir string, fileUpdates chan *asink.Event) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic("Failed to create fsnotify watcher")
@@ -37,18 +38,18 @@ func StartWatching(watchDir string, fileUpdates chan *Event) {
 					continue
 				}
 
-				event := new(Event)
+				event := new(asink.Event)
 				if ev.IsCreate() || ev.IsModify() {
-					event.Type = UPDATE
+					event.Type = asink.UPDATE
 				} else if ev.IsDelete() || ev.IsRename() {
-					event.Type = DELETE
+					event.Type = asink.DELETE
 				} else {
 					panic("Unknown fsnotify event type")
 				}
 
-				event.Status = NOTICED
+				event.Status = asink.NOTICED
 				event.Path = ev.Name
-				event.Timestamp = time.Now()
+				event.Timestamp = time.Now().UnixNano()
 
 				fileUpdates <- event
 

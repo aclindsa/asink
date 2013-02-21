@@ -1,8 +1,4 @@
-package main
-
-import (
-	"time"
-)
+package asink
 
 //event type
 type EventType uint32
@@ -31,8 +27,8 @@ type Event struct {
 	Status    EventStatus
 	Path      string
 	Hash      string
-	Timestamp time.Time
-	InDB      bool //defaults to false
+	Timestamp int64
+	InDB      bool `json:"-"` //defaults to false. Omitted from json marshalling.
 }
 
 func (e Event) IsUpdate() bool {
@@ -41,4 +37,8 @@ func (e Event) IsUpdate() bool {
 
 func (e Event) IsDelete() bool {
 	return e.Type&DELETE == DELETE
+}
+
+type EventList struct {
+	Events []*Event
 }

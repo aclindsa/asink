@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"io"
@@ -7,7 +7,7 @@ import (
 	"path"
 )
 
-func ensureDirExists(dir string) error {
+func EnsureDirExists(dir string) error {
 	_, err := os.Lstat(dir)
 	if err != nil {
 		fi, err := os.Lstat(path.Dir(dir))
@@ -22,7 +22,7 @@ func ensureDirExists(dir string) error {
 	return nil
 }
 
-func copyToTmp(src string, tmpdir string) (string, error) {
+func CopyToTmp(src string, tmpdir string) (string, error) {
 	infile, err := os.Open(src)
 	if err != nil {
 		return "", err

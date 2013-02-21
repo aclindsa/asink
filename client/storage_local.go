@@ -1,6 +1,7 @@
 package main
 
 import (
+	"asink/util"
 	"code.google.com/p/goconf/conf"
 	"errors"
 	"io"
@@ -24,11 +25,11 @@ func NewLocalStorage(config *conf.ConfigFile) (*LocalStorage, error) {
 	ls.tmpSubdir = path.Join(storageDir, ".asink-tmpdir")
 
 	//make sure the base directory and tmp subdir exist
-	err = ensureDirExists(ls.storageDir)
+	err = util.EnsureDirExists(ls.storageDir)
 	if err != nil {
 		return nil, err
 	}
-	err = ensureDirExists(ls.tmpSubdir)
+	err = util.EnsureDirExists(ls.tmpSubdir)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +38,7 @@ func NewLocalStorage(config *conf.ConfigFile) (*LocalStorage, error) {
 }
 
 func (ls *LocalStorage) Put(filename string, hash string) (e error) {
-	tmpfile, err := copyToTmp(filename, ls.tmpSubdir)
+	tmpfile, err := util.CopyToTmp(filename, ls.tmpSubdir)
 	if err != nil {
 		return err
 	}
