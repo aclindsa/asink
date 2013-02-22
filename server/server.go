@@ -2,6 +2,7 @@ package main
 
 import (
 	"asink"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,15 +13,22 @@ import (
 )
 
 var eventsRegexp *regexp.Regexp
-
 var port int = 8080
+var db *sql.DB
+
 func init() {
+	var err error
 	const port_usage = "Port on which to serve HTTP API"
 
 	flag.IntVar(&port, "port", 8080, port_usage)
 	flag.IntVar(&port, "p", 8080, port_usage+" (shorthand)")
 
 	eventsRegexp = regexp.MustCompile("^/events/([0-9]+)$")
+
+	db, err = GetAndInitDB()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
@@ -42,28 +50,58 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getEvents(w http.ResponseWriter, r *http.Request, nextEvent uint64) {
-	fmt.Fprintf(w, strconv.FormatUint(nextEvent, 10))
-}
-
-func putEvents(w http.ResponseWriter, r *http.Request) {
-	var events asink.EventList
-	var error_occurred bool = false
+	var events []*asink.Event
 	var error_message string = ""
 	defer func() {
 		var apiresponse asink.APIResponse
-		if error_occurred {
+		if error_message != "" {
 			apiresponse = asink.APIResponse{
-				Status: "error",
+				Status:      asink.ERROR,
 				Explanation: error_message,
 			}
 		} else {
 			apiresponse = asink.APIResponse{
-				Status: "success",
+				Status: asink.SUCCESS,
+				Events: events,
 			}
 		}
 		b, err := json.Marshal(apiresponse)
 		if err != nil {
-			panic(err)
+			error_message = err.Error()
+			return
+		}
+		w.Write(b)
+	}()
+
+	events, err := DatabaseRetrieveEvents(db, nextEvent, 50)
+	if err != nil {
+		panic(err)
+		error_message = err.Error()
+		return
+	}
+
+	//TODO long-poll here if events is empty
+}
+
+func putEvents(w http.ResponseWriter, r *http.Request) {
+	var events asink.EventList
+	var error_message string = ""
+	defer func() {
+		var apiresponse asink.APIResponse
+		if error_message != "" {
+			apiresponse = asink.APIResponse{
+				Status:      asink.ERROR,
+				Explanation: error_message,
+			}
+		} else {
+			apiresponse = asink.APIResponse{
+				Status: asink.SUCCESS,
+			}
+		}
+		b, err := json.Marshal(apiresponse)
+		if err != nil {
+			error_message = err.Error()
+			return
 		}
 		w.Write(b)
 	}()
@@ -79,7 +117,7 @@ func putEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, event := range events.Events {
-		fmt.Println(event)
+		DatabaseAddEvent(db, event)
 	}
 }
 

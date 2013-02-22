@@ -7,10 +7,11 @@ import (
 	"code.google.com/p/goconf/conf"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"net/http"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/user"
 	"path"
@@ -45,7 +46,6 @@ func init() {
 
 func main() {
 	flag.Parse()
-	fmt.Println("config file:", globals.configFileName)
 
 	config, err := conf.ReadConfigFile(globals.configFileName)
 	if err != nil {
@@ -78,13 +78,6 @@ func main() {
 		panic(err)
 	}
 
-	//TODO FIXME REMOVEME
-	fmt.Println(globals.syncDir)
-	fmt.Println(globals.cacheDir)
-	fmt.Println(globals.tmpDir)
-	fmt.Println(globals.storage)
-	//TODO FIXME REMOVEME
-
 	globals.server, err = config.GetString("server", "host")
 	globals.port, err = config.GetInt("server", "port")
 
@@ -94,7 +87,6 @@ func main() {
 	globals.db, err = GetAndInitDB(config)
 	if err != nil {
 		panic(err)
-		return
 	}
 
 	for {
@@ -158,6 +150,19 @@ func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 	}
 
 	//finally, send it off to the server
+	err = SendEvent(globals, event)
+	if err != nil {
+		panic(err) //TODO handle sensibly
+	}
+
+	event.Status |= asink.ON_SERVER
+	err = DatabaseUpdateEvent(globals.db, event)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func SendEvent(globals AsinkGlobals, event *asink.Event) error {
 	url := "http://" + globals.server + ":" + strconv.Itoa(int(globals.port)) + "/events/"
 
 	//construct json payload
@@ -166,36 +171,31 @@ func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 	}
 	b, err := json.Marshal(events)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println(string(b))
 
 	//actually make the request
 	resp, err := http.Post(url, "application/json", bytes.NewReader(b))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	//check to make sure request succeeded
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	var apistatus asink.APIResponse
 	err = json.Unmarshal(body, &apistatus)
 	if err != nil {
-		panic(err) //TODO handle sensibly
+		return err
 	}
-	if apistatus.Status != "success" {
-		panic("Status not success") //TODO handle sensibly
+	if apistatus.Status != asink.SUCCESS {
+		return errors.New("API response was not success")
 	}
-	fmt.Println(apistatus)
 
-	event.Status |= asink.ON_SERVER
-	err = DatabaseUpdateEvent(globals.db, event)
-	if err != nil {
-		panic(err)
-	}
+	return nil
 }

@@ -21,14 +21,15 @@ const (
 )
 
 type Event struct {
-	Id        int64
-	LocalId   int64
-	Type      EventType
-	Status    EventStatus
-	Path      string
-	Hash      string
-	Timestamp int64
-	InDB      bool `json:"-"` //defaults to false. Omitted from json marshalling.
+	Id          int64
+	LocalId     int64
+	Type        EventType
+	Status      EventStatus
+	Path        string
+	Hash        string
+	Timestamp   int64
+	Permissions uint32
+	InDB        bool `json:"-"` //defaults to false. Omitted from json marshalling.
 }
 
 func (e Event) IsUpdate() bool {
@@ -37,8 +38,4 @@ func (e Event) IsUpdate() bool {
 
 func (e Event) IsDelete() bool {
 	return e.Type&DELETE == DELETE
-}
-
-type EventList struct {
-	Events []*Event
 }
