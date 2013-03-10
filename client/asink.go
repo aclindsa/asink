@@ -158,7 +158,7 @@ func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 	event.Status |= asink.ON_SERVER
 	err = DatabaseUpdateEvent(globals.db, event)
 	if err != nil {
-		panic(err)
+		panic(err) //TODO probably, definitely, none of these should panic
 	}
 }
 

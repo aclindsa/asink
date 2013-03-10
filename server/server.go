@@ -12,6 +12,7 @@ import (
 	"strconv"
 )
 
+//global variables
 var eventsRegexp *regexp.Regexp
 var port int = 8080
 var db *sql.DB
@@ -80,7 +81,15 @@ func getEvents(w http.ResponseWriter, r *http.Request, nextEvent uint64) {
 		return
 	}
 
-	//TODO long-poll here if events is empty
+	//long-poll if events is empty
+	if len(events) == 0 {
+		c := make(chan *asink.Event)
+		addPoller("aclindsa", &c) //TODO support more than one user
+		e, ok := <-c
+		if ok {
+			events = append(events, e)
+		}
+	}
 }
 
 func putEvents(w http.ResponseWriter, r *http.Request) {
@@ -119,6 +128,8 @@ func putEvents(w http.ResponseWriter, r *http.Request) {
 	for _, event := range events.Events {
 		DatabaseAddEvent(db, event)
 	}
+
+	broadcastToPollers("aclindsa", events.Events[0]) //TODO support more than one user
 }
 
 func eventHandler(w http.ResponseWriter, r *http.Request) {
