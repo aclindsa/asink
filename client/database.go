@@ -7,9 +7,15 @@ import (
 	"errors"
 	_ "github.com/mattn/go-sqlite3"
 	"strconv"
+	"sync"
 )
 
-func GetAndInitDB(config *conf.ConfigFile) (*sql.DB, error) {
+type AsinkDB struct {
+	db *sql.DB
+	lock sync.Mutex
+}
+
+func GetAndInitDB(config *conf.ConfigFile) (*AsinkDB, error) {
 	dbLocation, err := config.GetString("local", "dblocation")
 	if err != nil {
 		return nil, errors.New("Error: database location not specified in config file.")
@@ -41,14 +47,25 @@ func GetAndInitDB(config *conf.ConfigFile) (*sql.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	ret := new(AsinkDB)
+	ret.db = db
+	return ret, nil
 }
 
-func DatabaseAddEvent(db *sql.DB, e *asink.Event) error {
-	tx, err := db.Begin()
+func (adb *AsinkDB) DatabaseAddEvent(e *asink.Event) (err error) {
+	adb.lock.Lock()
+	tx, err := adb.db.Begin()
 	if err != nil {
 		return err
 	}
+	//make sure the transaction gets rolled back on error, and the database gets unlocked
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+		adb.lock.Unlock()
+	}()
+
 	result, err := tx.Exec("INSERT INTO events (id, type, status, path, hash, timestamp, permissions) VALUES (?,?,?,?,?,?,?);", e.Id, e.Type, e.Status, e.Path, e.Hash, e.Timestamp, e.Permissions)
 	if err != nil {
 		return err
@@ -67,15 +84,24 @@ func DatabaseAddEvent(db *sql.DB, e *asink.Event) error {
 	return nil
 }
 
-func DatabaseUpdateEvent(db *sql.DB, e *asink.Event) error {
+func (adb *AsinkDB) DatabaseUpdateEvent(e *asink.Event) (err error) {
 	if !e.InDB {
 		return errors.New("Attempting to update an event in the database which hasn't been previously added.")
 	}
 
-	tx, err := db.Begin()
+	adb.lock.Lock()
+	tx, err := adb.db.Begin()
 	if err != nil {
 		return err
 	}
+	//make sure the transaction gets rolled back on error, and the database gets unlocked
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+		adb.lock.Unlock()
+	}()
+
 	result, err := tx.Exec("UPDATE events SET id=?, type=?, status=?, path=?, hash=?, timestamp=?, permissions=? WHERE localid=?;", e.Id, e.Type, e.Status, e.Path, e.Hash, e.Timestamp, e.Permissions, e.LocalId)
 	if err != nil {
 		return err

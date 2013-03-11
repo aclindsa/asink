@@ -5,7 +5,6 @@ import (
 	"asink/util"
 	"bytes"
 	"code.google.com/p/goconf/conf"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -23,7 +22,7 @@ type AsinkGlobals struct {
 	syncDir        string
 	cacheDir       string
 	tmpDir         string
-	db             *sql.DB
+	db             *AsinkDB
 	storage        Storage
 	server         string
 	port           int
@@ -91,13 +90,13 @@ func main() {
 
 	for {
 		event := <-fileUpdates
-		ProcessEvent(globals, event)
+		go ProcessEvent(globals, event)
 	}
 }
 
 func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 	//add to database
-	err := DatabaseAddEvent(globals.db, event)
+	err := globals.db.DatabaseAddEvent(event)
 	if err != nil {
 		panic(err)
 	}
@@ -129,7 +128,7 @@ func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 		event.Status |= asink.CACHED
 
 		//update database
-		err = DatabaseUpdateEvent(globals.db, event)
+		err = globals.db.DatabaseUpdateEvent(event)
 		if err != nil {
 			panic(err)
 		}
@@ -142,7 +141,7 @@ func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 		event.Status |= asink.UPLOADED
 
 		//update database again
-		err = DatabaseUpdateEvent(globals.db, event)
+		err = globals.db.DatabaseUpdateEvent(event)
 		if err != nil {
 			panic(err)
 		}
@@ -156,7 +155,7 @@ func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 	}
 
 	event.Status |= asink.ON_SERVER
-	err = DatabaseUpdateEvent(globals.db, event)
+	err = globals.db.DatabaseUpdateEvent(event)
 	if err != nil {
 		panic(err) //TODO probably, definitely, none of these should panic
 	}
