@@ -3,18 +3,12 @@ package main
 import (
 	"asink"
 	"asink/util"
-	"bytes"
 	"code.google.com/p/goconf/conf"
-	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"os/user"
 	"path"
-	"strconv"
 )
 
 type AsinkGlobals struct {
@@ -80,21 +74,27 @@ func main() {
 	globals.server, err = config.GetString("server", "host")
 	globals.port, err = config.GetInt("server", "port")
 
-	fileUpdates := make(chan *asink.Event)
-	go StartWatching(globals.syncDir, fileUpdates)
-
 	globals.db, err = GetAndInitDB(config)
 	if err != nil {
 		panic(err)
 	}
 
+	//spawn goroutines to handle local events
+	localFileUpdates := make(chan *asink.Event)
+	go StartWatching(globals.syncDir, localFileUpdates)
+
+	//spawn goroutines to receive remote events
+	remoteFileUpdates := make(chan *asink.Event)
+	go GetEvents(globals, remoteFileUpdates)
+	go ProcessRemoteEvents(globals, remoteFileUpdates)
+
 	for {
-		event := <-fileUpdates
-		go ProcessEvent(globals, event)
+		event := <-localFileUpdates
+		go ProcessLocalEvent(globals, event)
 	}
 }
 
-func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
+func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 	//add to database
 	err := globals.db.DatabaseAddEvent(event)
 	if err != nil {
@@ -124,6 +124,7 @@ func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 			if err != nil {
 				panic(err)
 			}
+			panic(err)
 		}
 		event.Status |= asink.CACHED
 
@@ -161,40 +162,9 @@ func ProcessEvent(globals AsinkGlobals, event *asink.Event) {
 	}
 }
 
-func SendEvent(globals AsinkGlobals, event *asink.Event) error {
-	url := "http://" + globals.server + ":" + strconv.Itoa(int(globals.port)) + "/events/"
-
-	//construct json payload
-	events := asink.EventList{
-		Events: []*asink.Event{event},
+func ProcessRemoteEvents(globals AsinkGlobals, eventChan chan *asink.Event) {
+	for event := range eventChan {
+		fmt.Println(event)
+		//TODO actually download event, add it to the local database, and populate the local directory
 	}
-	b, err := json.Marshal(events)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(b))
-
-	//actually make the request
-	resp, err := http.Post(url, "application/json", bytes.NewReader(b))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	//check to make sure request succeeded
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	var apistatus asink.APIResponse
-	err = json.Unmarshal(body, &apistatus)
-	if err != nil {
-		return err
-	}
-	if apistatus.Status != asink.SUCCESS {
-		return errors.New("API response was not success")
-	}
-
-	return nil
 }
