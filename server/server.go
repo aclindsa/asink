@@ -126,7 +126,11 @@ func putEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, event := range events.Events {
-		DatabaseAddEvent(db, event)
+		err = DatabaseAddEvent(db, event)
+		if err != nil {
+			error_message = err.Error()
+			return
+		}
 	}
 
 	broadcastToPollers("aclindsa", events.Events[0]) //TODO support more than one user
