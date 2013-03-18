@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const MIN_ERROR_WAIT = 100 // 1/10 of a second
+const MIN_ERROR_WAIT = 100   // 1/10 of a second
 const MAX_ERROR_WAIT = 10000 // 10 seconds
 
 func SendEvent(globals AsinkGlobals, event *asink.Event) error {
@@ -68,7 +68,7 @@ func GetEvents(globals AsinkGlobals, events chan *asink.Event) {
 	}
 
 	//query DB for latest remote event version number that we've seen locally
-	latestEvent, err := globals.db.DatabaseLatestRemoteEvent() 
+	latestEvent, err := globals.db.DatabaseLatestRemoteEvent()
 	if err != nil {
 		panic(err)
 	}
@@ -77,7 +77,7 @@ func GetEvents(globals AsinkGlobals, events chan *asink.Event) {
 		//query for events after latest_event
 		var fullUrl string
 		if latestEvent != nil {
-			fullUrl = url + strconv.FormatInt(latestEvent.Id + 1, 10)
+			fullUrl = url + strconv.FormatInt(latestEvent.Id+1, 10)
 		} else {
 			fullUrl = url + "0"
 		}
@@ -110,9 +110,8 @@ func GetEvents(globals AsinkGlobals, events chan *asink.Event) {
 			continue
 		}
 
-
 		for _, event := range apistatus.Events {
-			if latestEvent != nil && event.Id != latestEvent.Id + 1 {
+			if latestEvent != nil && event.Id != latestEvent.Id+1 {
 				break
 			}
 			events <- event

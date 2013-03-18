@@ -11,7 +11,7 @@ import (
 )
 
 type AsinkDB struct {
-	db *sql.DB
+	db   *sql.DB
 	lock sync.Mutex
 }
 

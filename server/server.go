@@ -128,6 +128,9 @@ func putEvents(w http.ResponseWriter, r *http.Request) {
 	for _, event := range events.Events {
 		err = DatabaseAddEvent(db, event)
 		if err != nil {
+			//TODO should probably do this in a way that the caller knows how many of these have failed and doesn't re-try sending ones that succeeded
+			//i.e. add this to the return codes or something
+			//OR put all the DatabaseAddEvent's inside a SQL transaction, and rollback on any failure
 			error_message = err.Error()
 			return
 		}
@@ -154,6 +157,11 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 	} else if r.Method == "POST" {
 		putEvents(w, r)
 	} else {
-		fmt.Fprintf(w, "You f-ed up.")
+		apiresponse := asink.APIResponse{
+			Status:      asink.ERROR,
+			Explanation: "Invalid HTTP method - only GET and POST are supported on this endpoint.",
+		}
+		b, _ := json.Marshal(apiresponse)
+		w.Write(b)
 	}
 }

@@ -42,7 +42,7 @@ func addPoller(uid string, channel *chan *asink.Event) {
 	}
 
 	//set timer to call function after one minute
-	timeout := time.Duration(1)*time.Minute
+	timeout := time.Duration(1) * time.Minute
 	time.AfterFunc(timeout, func() {
 		group.lock.Lock()
 		for i, c := range group.channels {
