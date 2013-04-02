@@ -6,6 +6,7 @@ import (
 	"code.google.com/p/goconf/conf"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
@@ -162,9 +163,38 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 	}
 }
 
+func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
+	//Download event
+	if event.IsUpdate() {
+		outfile, err := ioutil.TempFile(globals.tmpDir, "asink")
+		if err != nil {
+			panic(err) //TODO handle sensibly
+		}
+		tmpfilename := outfile.Name()
+		outfile.Close()
+		err = globals.storage.Get(tmpfilename, event.Hash)
+		if err != nil {
+			panic(err) //TODO handle sensibly
+		}
+
+		//rename to local hashed filename
+		err = os.Rename(tmpfilename, path.Join(globals.cacheDir, event.Hash))
+		if err != nil {
+			err := os.Remove(tmpfilename)
+			if err != nil {
+				panic(err)
+			}
+			panic(err)
+		}
+	}
+
+	fmt.Println(event)
+	//TODO make sure file being overwritten is either unchanged or already copied off and hashed
+	//TODO add event to the local database, and populate the local directory
+}
+
 func ProcessRemoteEvents(globals AsinkGlobals, eventChan chan *asink.Event) {
 	for event := range eventChan {
-		fmt.Println(event)
-		//TODO actually download event, add it to the local database, and populate the local directory
+		ProcessRemoteEvent(globals, event)
 	}
 }
