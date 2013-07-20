@@ -2,7 +2,6 @@ package main
 
 import (
 	"asink"
-	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -15,7 +14,7 @@ import (
 //global variables
 var eventsRegexp *regexp.Regexp
 var port int = 8080
-var db *sql.DB
+var adb *AsinkDB
 
 func init() {
 	var err error
@@ -26,7 +25,7 @@ func init() {
 
 	eventsRegexp = regexp.MustCompile("^/events/([0-9]+)$")
 
-	db, err = GetAndInitDB()
+	adb, err = GetAndInitDB()
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +73,7 @@ func getEvents(w http.ResponseWriter, r *http.Request, nextEvent uint64) {
 		w.Write(b)
 	}()
 
-	events, err := DatabaseRetrieveEvents(db, nextEvent, 50)
+	events, err := adb.DatabaseRetrieveEvents(nextEvent, 50)
 	if err != nil {
 		panic(err)
 		error_message = err.Error()
@@ -126,7 +125,7 @@ func putEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, event := range events.Events {
-		err = DatabaseAddEvent(db, event)
+		err = adb.DatabaseAddEvent(event)
 		if err != nil {
 			//TODO should probably do this in a way that the caller knows how many of these have failed and doesn't re-try sending ones that succeeded
 			//i.e. add this to the return codes or something

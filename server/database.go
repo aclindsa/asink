@@ -4,9 +4,15 @@ import (
 	"asink"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
+	"sync"
 )
 
-func GetAndInitDB() (*sql.DB, error) {
+type AsinkDB struct {
+	db   *sql.DB
+	lock sync.Mutex
+}
+
+func GetAndInitDB() (*AsinkDB, error) {
 	dbLocation := "asink-server.db" //TODO make me configurable
 
 	db, err := sql.Open("sqlite3", dbLocation)
@@ -33,11 +39,14 @@ func GetAndInitDB() (*sql.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	ret := new(AsinkDB)
+	ret.db = db
+	return ret, nil
 }
 
-func DatabaseAddEvent(db *sql.DB, e *asink.Event) (err error) {
-	tx, err := db.Begin()
+func (adb *AsinkDB) DatabaseAddEvent(e *asink.Event) (err error) {
+	adb.lock.Lock()
+	tx, err := adb.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -47,6 +56,7 @@ func DatabaseAddEvent(db *sql.DB, e *asink.Event) (err error) {
 		if err != nil {
 			tx.Rollback()
 		}
+		adb.lock.Unlock()
 	}()
 
 	result, err := tx.Exec("INSERT INTO events (localid, type, status, path, hash, timestamp, permissions) VALUES (?,?,?,?,?,?,?);", e.LocalId, e.Type, e.Status, e.Path, e.Hash, e.Timestamp, e.Permissions)
@@ -67,8 +77,13 @@ func DatabaseAddEvent(db *sql.DB, e *asink.Event) (err error) {
 	return nil
 }
 
-func DatabaseRetrieveEvents(db *sql.DB, firstId uint64, maxEvents uint) (events []*asink.Event, err error) {
-	rows, err := db.Query("SELECT id, localid, type, status, path, hash, timestamp, permissions FROM events WHERE id >= ? ORDER BY id ASC LIMIT ?;", firstId, maxEvents)
+func (adb *AsinkDB) DatabaseRetrieveEvents(firstId uint64, maxEvents uint) (events []*asink.Event, err error) {
+	adb.lock.Lock()
+	//make sure the database gets unlocked on return
+	defer func() {
+		adb.lock.Unlock()
+	}()
+	rows, err := adb.db.Query("SELECT id, localid, type, status, path, hash, timestamp, permissions FROM events WHERE id >= ? ORDER BY id ASC LIMIT ?;", firstId, maxEvents)
 	if err != nil {
 		return nil, err
 	}
