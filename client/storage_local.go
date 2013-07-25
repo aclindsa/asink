@@ -61,7 +61,7 @@ func (ls *LocalStorage) Get(filename string, hash string) error {
 	}
 	defer infile.Close()
 
-	outfile, err := os.Open(filename)
+	outfile, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
