@@ -12,12 +12,17 @@ const (
 type EventStatus uint32
 
 const (
+	//the state of the event on the local asink instance on which it originated:
 	NOTICED       = 1 << iota //watcher.go has been notified that a file changed
 	COPIED_TO_TMP             //temporary version saved off
 	HASHED                    //hash taken of tmp file
 	CACHED                    //tmp file renamed to its hash
 	UPLOADED                  //tmp file has been successfully uploaded to storage
 	ON_SERVER                 //server has been successfully notified of event
+	//the state of the event on the asink instance notified that it occurred elsewhere
+	NOTIFIED   //we've been told a file has been changed remotely
+	DOWNLOADED //event has been downloaded and stored in the local file cache
+	SYNCED     //everything has been done to ensure the affected file is up-to-date
 )
 
 type Event struct {

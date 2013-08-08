@@ -164,6 +164,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 }
 
 func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
+	//TODO check to see if event originated locally. If it did, stop processing it.
 	//Download event
 	if event.IsUpdate() {
 		outfile, err := ioutil.TempFile(globals.tmpDir, "asink")
