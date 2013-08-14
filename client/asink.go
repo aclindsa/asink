@@ -80,6 +80,9 @@ func main() {
 		panic(err)
 	}
 
+	//spawn goroutine to handle locking file paths
+	go PathLocker(globals.db)
+
 	//spawn goroutines to handle local events
 	localFileUpdates := make(chan *asink.Event)
 	go StartWatching(globals.syncDir, localFileUpdates)
@@ -96,14 +99,15 @@ func main() {
 }
 
 func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
-	//add to database
-	err := globals.db.DatabaseAddEvent(event)
-	if err != nil {
-		panic(err)
+	latestLocal := LockPath(event.Path, true)
+	defer UnlockPath(event)
+	if latestLocal != nil {
+		event.Predecessor = latestLocal.Hash
 	}
 
 	if event.IsUpdate() {
 		//copy to tmp
+		//TODO upload in chunks and check modification times to make sure it hasn't been changed instead of copying the whole thing off
 		tmpfilename, err := util.CopyToTmp(event.Path, globals.tmpDir)
 		if err != nil {
 			panic(err)
@@ -129,44 +133,41 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		}
 		event.Status |= asink.CACHED
 
-		//update database
-		err = globals.db.DatabaseUpdateEvent(event)
-		if err != nil {
-			panic(err)
-		}
-
 		//upload file to remote storage
 		err = globals.storage.Put(event.Path, event.Hash)
 		if err != nil {
 			panic(err)
 		}
 		event.Status |= asink.UPLOADED
-
-		//update database again
-		err = globals.db.DatabaseUpdateEvent(event)
-		if err != nil {
-			panic(err)
-		}
-
 	}
 
 	//finally, send it off to the server
-	err = SendEvent(globals, event)
+	err := SendEvent(globals, event)
 	if err != nil {
 		panic(err) //TODO handle sensibly
 	}
 
 	event.Status |= asink.ON_SERVER
-	err = globals.db.DatabaseUpdateEvent(event)
-	if err != nil {
-		panic(err) //TODO probably, definitely, none of these should panic
-	}
 }
 
 func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
-	//TODO check to see if event originated locally. If it did, stop processing it.
+	latestLocal := LockPath(event.Path, true)
+	defer UnlockPath(event)
+	//if we already have this event, or if it is older than our most recent event, bail out
+	if latestLocal != nil {
+		if event.Timestamp < latestLocal.Timestamp || event.IsSameEvent(latestLocal) {
+			UnlockPath(event)
+			return
+		}
+
+		if latestLocal.Hash != event.Predecessor && latestLocal.Hash != event.Hash {
+			panic("conflict")
+			//TODO handle conflict
+		}
+	}
+
 	//Download event
-	if event.IsUpdate() {
+	if event.IsUpdate() && (latestLocal == nil || event.Hash != latestLocal.Hash) {
 		outfile, err := ioutil.TempFile(globals.tmpDir, "asink")
 		if err != nil {
 			panic(err) //TODO handle sensibly
@@ -191,7 +192,6 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 
 	fmt.Println(event)
 	//TODO make sure file being overwritten is either unchanged or already copied off and hashed
-	//TODO add event to the local database, and populate the local directory
 }
 
 func ProcessRemoteEvents(globals AsinkGlobals, eventChan chan *asink.Event) {

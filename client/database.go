@@ -141,3 +141,24 @@ func (adb *AsinkDB) DatabaseLatestEventForPath(path string) (event *asink.Event,
 		return event, nil
 	}
 }
+
+//returns nil if no such event exists
+func (adb *AsinkDB) DatabaseLatestRemoteEvent() (event *asink.Event, err error) {
+	adb.lock.Lock()
+	//make sure the database gets unlocked
+	defer adb.lock.Unlock()
+
+	row := adb.db.QueryRow("SELECT id, localid, type, status, path, hash, predecessor, timestamp, permissions FROM events WHERE id > 0 ORDER BY id DESC LIMIT 1;")
+
+	event = new(asink.Event)
+	err = row.Scan(&event.Id, &event.LocalId, &event.Type, &event.Status, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
+		return event, nil
+	}
+}
