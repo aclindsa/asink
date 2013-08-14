@@ -168,26 +168,44 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 	}
 
 	//Download event
-	if event.IsUpdate() && (latestLocal == nil || event.Hash != latestLocal.Hash) {
-		outfile, err := ioutil.TempFile(globals.tmpDir, "asink")
-		if err != nil {
-			panic(err) //TODO handle sensibly
-		}
-		tmpfilename := outfile.Name()
-		outfile.Close()
-		err = globals.storage.Get(tmpfilename, event.Hash)
-		if err != nil {
-			panic(err) //TODO handle sensibly
-		}
+	if event.IsUpdate() {
+		if latestLocal == nil || event.Hash != latestLocal.Hash {
 
-		//rename to local hashed filename
-		err = os.Rename(tmpfilename, path.Join(globals.cacheDir, event.Hash))
-		if err != nil {
-			err := os.Remove(tmpfilename)
+			outfile, err := ioutil.TempFile(globals.tmpDir, "asink")
+			if err != nil {
+				panic(err) //TODO handle sensibly
+			}
+			tmpfilename := outfile.Name()
+			outfile.Close()
+			err = globals.storage.Get(tmpfilename, event.Hash)
+			if err != nil {
+				panic(err) //TODO handle sensibly
+			}
+
+			//rename to local hashed filename
+			hashedFilename := path.Join(globals.cacheDir, event.Hash)
+			err = os.Rename(tmpfilename, hashedFilename)
+			if err != nil {
+				err := os.Remove(tmpfilename)
+				if err != nil {
+					panic(err)
+				}
+				panic(err)
+			}
+
+			//TODO copy hashed file to another tmp, then rename it to the actual file.
+			tmpfilename, err = util.CopyToTmp(hashedFilename, globals.tmpDir)
 			if err != nil {
 				panic(err)
 			}
-			panic(err)
+			err = os.Rename(tmpfilename, event.Path)
+			if err != nil {
+				err := os.Remove(tmpfilename)
+				if err != nil {
+					panic(err)
+				}
+				panic(err)
+			}
 		}
 	} else {
 		//intentionally ignore errors in case this file has been deleted out from under us
