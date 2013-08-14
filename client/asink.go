@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/user"
 	"path"
-	"syscall"
 )
 
 type AsinkGlobals struct {
@@ -110,13 +109,8 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		//copy to tmp
 		//TODO upload in chunks and check modification times to make sure it hasn't been changed instead of copying the whole thing off
 		tmpfilename, err := util.CopyToTmp(event.Path, globals.tmpDir)
-		if err != nil {
-			if e, ok := err.(*os.PathError); ok && e.Err == syscall.ENOENT {
-				//if the file doesn't exist, it must've been deleted out from under us, disregard this event
-				return
-			} else {
-				panic(err)
-			}
+		if err != nil && !util.ErrorFileNotFound(err) {
+			panic(err)
 		}
 		event.Status |= asink.COPIED_TO_TMP
 

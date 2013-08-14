@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"syscall"
 )
 
 func EnsureDirExists(dir string) error {
@@ -41,4 +42,11 @@ func CopyToTmp(src string, tmpdir string) (string, error) {
 	}
 
 	return outfile.Name(), nil
+}
+
+func ErrorFileNotFound(err error) bool {
+	if e, ok := err.(*os.PathError); ok && e.Err == syscall.ENOENT {
+		return true
+	}
+	return false
 }

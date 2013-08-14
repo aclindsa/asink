@@ -15,7 +15,7 @@ type AsinkDB struct {
 func GetAndInitDB() (*AsinkDB, error) {
 	dbLocation := "asink-server.db" //TODO make me configurable
 
-	db, err := sql.Open("sqlite3", dbLocation)
+	db, err := sql.Open("sqlite3", "file:"+dbLocation+"?cache=shared&mode=rwc")
 	if err != nil {
 		return nil, err
 	}
