@@ -113,6 +113,12 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 			panic(err)
 		}
 
+		fileinfo, err := os.Stat(event.Path)
+		if err != nil && !util.ErrorFileNotFound(err) {
+			panic(err)
+		}
+		event.Permissions = fileinfo.Mode()
+
 		//get the file's hash
 		hash, err := HashFile(tmpfilename)
 		event.Hash = hash
@@ -204,6 +210,12 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 				if err != nil {
 					panic(err)
 				}
+				panic(err)
+			}
+		}
+		if latestLocal == nil || event.Permissions != latestLocal.Permissions {
+			err := os.Chmod(event.Path, event.Permissions)
+			if err != nil && !util.ErrorFileNotFound(err) {
 				panic(err)
 			}
 		}

@@ -1,5 +1,9 @@
 package asink
 
+import (
+	"os"
+)
+
 //event type
 type EventType uint32
 
@@ -34,7 +38,7 @@ type Event struct {
 	Hash        string
 	Predecessor string
 	Timestamp   int64
-	Permissions uint32
+	Permissions os.FileMode
 	InDB        bool `json:"-"` //defaults to false. Omitted from json marshalling.
 }
 
