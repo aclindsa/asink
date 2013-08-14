@@ -112,7 +112,6 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		if err != nil && !util.ErrorFileNotFound(err) {
 			panic(err)
 		}
-		event.Status |= asink.COPIED_TO_TMP
 
 		//get the file's hash
 		hash, err := HashFile(tmpfilename)
@@ -120,7 +119,6 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		if err != nil {
 			panic(err)
 		}
-		event.Status |= asink.HASHED
 
 		//If the file didn't actually change, squash this event
 		if latestLocal != nil && event.Hash == latestLocal.Hash {
@@ -137,14 +135,12 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 			}
 			panic(err)
 		}
-		event.Status |= asink.CACHED
 
 		//upload file to remote storage
 		err = globals.storage.Put(event.Path, event.Hash)
 		if err != nil {
 			panic(err)
 		}
-		event.Status |= asink.UPLOADED
 	}
 
 	//finally, send it off to the server
@@ -153,7 +149,6 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		panic(err) //TODO handle sensibly
 	}
 
-	event.Status |= asink.ON_SERVER
 }
 
 func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
