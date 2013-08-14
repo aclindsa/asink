@@ -21,7 +21,7 @@ func GetAndInitDB(config *conf.ConfigFile) (*AsinkDB, error) {
 		return nil, errors.New("Error: database location not specified in config file.")
 	}
 
-	db, err := sql.Open("sqlite3", dbLocation)
+	db, err := sql.Open("sqlite3", "file:"+dbLocation+"?cache=shared&mode=rwc")
 	if err != nil {
 		return nil, err
 	}
@@ -122,23 +122,22 @@ func (adb *AsinkDB) DatabaseUpdateEvent(e *asink.Event) (err error) {
 }
 
 //returns nil if no such event exists
-func (adb *AsinkDB) DatabaseLatestRemoteEvent() (event *asink.Event, err error) {
+func (adb *AsinkDB) DatabaseLatestEventForPath(path string) (event *asink.Event, err error) {
 	adb.lock.Lock()
 	//make sure the database gets unlocked
 	defer adb.lock.Unlock()
 
 	row := adb.db.QueryRow("SELECT id, localid, type, status, path, hash, predecessor, timestamp, permissions FROM events WHERE path == ? ORDER BY timestamp DESC LIMIT 1;", path)
-	if err != nil {
-		return nil, err
-	}
 
-	for rows.Next() {
-		event = new(asink.Event)
-		err = rows.Scan(&event.Id, &event.LocalId, &event.Type, &event.Status, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
-		if err != nil {
-			return nil, err
-		}
+	event = new(asink.Event)
+	err = row.Scan(&event.Id, &event.LocalId, &event.Type, &event.Status, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
 		return event, nil
 	}
-	return nil, nil
 }
