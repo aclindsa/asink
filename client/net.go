@@ -26,7 +26,6 @@ func SendEvent(globals AsinkGlobals, event *asink.Event) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(b))
 
 	//actually make the request
 	resp, err := http.Post(url, "application/json", bytes.NewReader(b))

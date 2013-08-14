@@ -109,15 +109,27 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		//copy to tmp
 		//TODO upload in chunks and check modification times to make sure it hasn't been changed instead of copying the whole thing off
 		tmpfilename, err := util.CopyToTmp(event.Path, globals.tmpDir)
-		if err != nil && !util.ErrorFileNotFound(err) {
+		if err != nil {
+			//bail out if the file we are trying to upload already got deleted
+			if util.ErrorFileNotFound(err) {
+				event.Status |= asink.DISCARDED
+				return
+			}
 			panic(err)
 		}
 
+		//try to collect the file's permissions
 		fileinfo, err := os.Stat(event.Path)
-		if err != nil && !util.ErrorFileNotFound(err) {
+		if err != nil {
+			//bail out if the file we are trying to upload already got deleted
+			if util.ErrorFileNotFound(err) {
+				event.Status |= asink.DISCARDED
+				return
+			}
 			panic(err)
+		} else {
+			event.Permissions = fileinfo.Mode()
 		}
-		event.Permissions = fileinfo.Mode()
 
 		//get the file's hash
 		hash, err := HashFile(tmpfilename)
@@ -129,6 +141,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		//If the file didn't actually change, squash this event
 		if latestLocal != nil && event.Hash == latestLocal.Hash {
 			os.Remove(tmpfilename)
+			event.Status |= asink.DISCARDED
 			return
 		}
 
@@ -148,6 +161,12 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		if err != nil {
 			panic(err)
 		}
+	} else {
+		//if we're trying to delete a file that we thought was already deleted, there's no need to delete it again
+		if latestLocal != nil && latestLocal.IsDelete() {
+			event.Status |= asink.DISCARDED
+			return
+		}
 	}
 
 	//finally, send it off to the server
@@ -155,16 +174,16 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 	if err != nil {
 		panic(err) //TODO handle sensibly
 	}
-
 }
 
 func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 	latestLocal := LockPath(event.Path, true)
 	defer UnlockPath(event)
+
 	//if we already have this event, or if it is older than our most recent event, bail out
 	if latestLocal != nil {
 		if event.Timestamp < latestLocal.Timestamp || event.IsSameEvent(latestLocal) {
-			UnlockPath(event)
+			event.Status |= asink.DISCARDED
 			return
 		}
 
@@ -226,7 +245,6 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 		//TODO delete file hierarchy beneath this file if its the last one in its directory?
 	}
 
-	fmt.Println(event)
 	//TODO make sure file being overwritten is either unchanged or already copied off and hashed
 }
 

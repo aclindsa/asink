@@ -47,7 +47,6 @@ func StartWatching(watchDir string, fileUpdates chan *asink.Event) {
 					panic("Unknown fsnotify event type")
 				}
 
-				event.Status = asink.NOTICED
 				event.Path = ev.Name
 				event.Timestamp = time.Now().UnixNano()
 

@@ -32,22 +32,25 @@ func PathLocker(db *AsinkDB) {
 		select {
 		case event = <-pathUnlockerChan:
 			if v, ok = m[event.Path]; ok != false {
-				if v.latestEvent == nil || !v.latestEvent.IsSameEvent(event) {
-					err := db.DatabaseAddEvent(event)
-					if err != nil {
-						panic(err)
+				//only update status in data structures if the event hasn't been discarded
+				if event.Status&asink.DISCARDED == 0 {
+					if v.latestEvent == nil || !v.latestEvent.IsSameEvent(event) {
+						err := db.DatabaseAddEvent(event)
+						if err != nil {
+							panic(err)
+						}
+						//TODO batch database writes instead of doing one at a time
 					}
-					//TODO batch database writes instead of doing one at a time
+					v.latestEvent = event
 				}
-				v.latestEvent = event
 				if len(v.localWaiters) > 0 {
 					c = v.localWaiters[0]
 					v.localWaiters = v.localWaiters[1:]
-					c <- event
+					c <- v.latestEvent
 				} else if len(v.remoteWaiters) > 0 {
 					c = v.remoteWaiters[0]
 					v.remoteWaiters = v.remoteWaiters[1:]
-					c <- event
+					c <- v.latestEvent
 				} else {
 					v.locked = false
 				}
