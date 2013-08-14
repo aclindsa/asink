@@ -37,10 +37,10 @@ type Event struct {
 	InDB        bool `json:"-"` //defaults to false. Omitted from json marshalling.
 }
 
-func (e Event) IsUpdate() bool {
+func (e *Event) IsUpdate() bool {
 	return e.Type&UPDATE == UPDATE
 }
 
-func (e Event) IsDelete() bool {
+func (e *Event) IsDelete() bool {
 	return e.Type&DELETE == DELETE
 }
