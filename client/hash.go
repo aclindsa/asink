@@ -8,6 +8,7 @@ import (
 )
 
 func HashFile(filename string) (string, error) {
+	//TODO change to sha512?
 	hashfn := sha256.New()
 
 	infile, err := os.Open(filename)

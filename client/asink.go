@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"syscall"
 )
 
 type AsinkGlobals struct {
@@ -110,7 +111,12 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		//TODO upload in chunks and check modification times to make sure it hasn't been changed instead of copying the whole thing off
 		tmpfilename, err := util.CopyToTmp(event.Path, globals.tmpDir)
 		if err != nil {
-			panic(err)
+			if e, ok := err.(*os.PathError); ok && e.Err == syscall.ENOENT {
+				//if the file doesn't exist, it must've been deleted out from under us, disregard this event
+				return
+			} else {
+				panic(err)
+			}
 		}
 		event.Status |= asink.COPIED_TO_TMP
 
@@ -121,6 +127,12 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 			panic(err)
 		}
 		event.Status |= asink.HASHED
+
+		//If the file didn't actually change, squash this event
+		if latestLocal != nil && event.Hash == latestLocal.Hash {
+			os.Remove(tmpfilename)
+			return
+		}
 
 		//rename to local cache w/ filename=hash
 		err = os.Rename(tmpfilename, path.Join(globals.cacheDir, event.Hash))
@@ -188,6 +200,10 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 			}
 			panic(err)
 		}
+	} else {
+		//intentionally ignore errors in case this file has been deleted out from under us
+		os.Remove(event.Path)
+		//TODO delete file hierarchy beneath this file if its the last one in its directory?
 	}
 
 	fmt.Println(event)
