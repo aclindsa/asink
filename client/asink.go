@@ -133,7 +133,8 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		}
 
 		//rename to local cache w/ filename=hash
-		err = os.Rename(tmpfilename, path.Join(globals.cacheDir, event.Hash))
+		cachedFilename := path.Join(globals.cacheDir, event.Hash)
+		err = os.Rename(tmpfilename, cachedFilename)
 		if err != nil {
 			err := os.Remove(tmpfilename)
 			if err != nil {
@@ -143,7 +144,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		}
 
 		//upload file to remote storage
-		err = globals.storage.Put(event.Path, event.Hash)
+		err = globals.storage.Put(cachedFilename, event.Hash)
 		if err != nil {
 			panic(err)
 		}
