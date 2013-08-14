@@ -31,7 +31,7 @@ func GetAndInitDB() (*AsinkDB, error) {
 	}
 	if !rows.Next() {
 		//if this is false, it means no rows were returned
-		tx.Exec("CREATE TABLE events (id INTEGER PRIMARY KEY ASC, localid INTEGER, type INTEGER, status INTEGER, path TEXT, hash TEXT, timestamp INTEGER, permissions INTEGER);")
+		tx.Exec("CREATE TABLE events (id INTEGER PRIMARY KEY ASC, localid INTEGER, type INTEGER, status INTEGER, path TEXT, hash TEXT, predecessor TEXT, timestamp INTEGER, permissions INTEGER);")
 		tx.Exec("CREATE INDEX IF NOT EXISTS pathidx on events (path);")
 	}
 	err = tx.Commit()
@@ -59,7 +59,7 @@ func (adb *AsinkDB) DatabaseAddEvent(e *asink.Event) (err error) {
 		adb.lock.Unlock()
 	}()
 
-	result, err := tx.Exec("INSERT INTO events (localid, type, status, path, hash, timestamp, permissions) VALUES (?,?,?,?,?,?,?);", e.LocalId, e.Type, e.Status, e.Path, e.Hash, e.Timestamp, e.Permissions)
+	result, err := tx.Exec("INSERT INTO events (localid, type, status, path, hash, predecessor, timestamp, permissions) VALUES (?,?,?,?,?,?,?,?);", e.LocalId, e.Type, e.Status, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions)
 	if err != nil {
 		return err
 	}
@@ -83,13 +83,13 @@ func (adb *AsinkDB) DatabaseRetrieveEvents(firstId uint64, maxEvents uint) (even
 	defer func() {
 		adb.lock.Unlock()
 	}()
-	rows, err := adb.db.Query("SELECT id, localid, type, status, path, hash, timestamp, permissions FROM events WHERE id >= ? ORDER BY id ASC LIMIT ?;", firstId, maxEvents)
+	rows, err := adb.db.Query("SELECT id, localid, type, status, path, hash, predecessor, timestamp, permissions FROM events WHERE id >= ? ORDER BY id ASC LIMIT ?;", firstId, maxEvents)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var event asink.Event
-		err = rows.Scan(&event.Id, &event.LocalId, &event.Type, &event.Status, &event.Path, &event.Hash, &event.Timestamp, &event.Permissions)
+		err = rows.Scan(&event.Id, &event.LocalId, &event.Type, &event.Status, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
 		if err != nil {
 			return nil, err
 		}

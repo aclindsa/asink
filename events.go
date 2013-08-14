@@ -32,6 +32,7 @@ type Event struct {
 	Status      EventStatus
 	Path        string
 	Hash        string
+	Predecessor string
 	Timestamp   int64
 	Permissions uint32
 	InDB        bool `json:"-"` //defaults to false. Omitted from json marshalling.
@@ -43,4 +44,8 @@ func (e *Event) IsUpdate() bool {
 
 func (e *Event) IsDelete() bool {
 	return e.Type&DELETE == DELETE
+}
+
+func (e *Event) IsSameEvent(e2 *Event) bool {
+	return (e.Type == e2.Type && e.Path == e2.Path && e.Hash == e2.Hash && e.Predecessor == e2.Predecessor && e.Timestamp == e2.Timestamp && e.Permissions == e2.Permissions)
 }
