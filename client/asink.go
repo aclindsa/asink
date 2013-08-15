@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 )
 
 type AsinkGlobals struct {
@@ -99,6 +100,14 @@ func main() {
 }
 
 func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
+	//make the path relative before we save/send it anywhere
+	var err error
+	absolutePath := event.Path
+	event.Path, err = filepath.Rel(globals.syncDir, event.Path)
+	if err != nil {
+		panic(err)
+	}
+
 	latestLocal := LockPath(event.Path, true)
 	defer UnlockPath(event)
 	if latestLocal != nil {
@@ -108,7 +117,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 	if event.IsUpdate() {
 		//copy to tmp
 		//TODO upload in chunks and check modification times to make sure it hasn't been changed instead of copying the whole thing off
-		tmpfilename, err := util.CopyToTmp(event.Path, globals.tmpDir)
+		tmpfilename, err := util.CopyToTmp(absolutePath, globals.tmpDir)
 		if err != nil {
 			//bail out if the file we are trying to upload already got deleted
 			if util.ErrorFileNotFound(err) {
@@ -119,7 +128,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		}
 
 		//try to collect the file's permissions
-		fileinfo, err := os.Stat(event.Path)
+		fileinfo, err := os.Stat(absolutePath)
 		if err != nil {
 			//bail out if the file we are trying to upload already got deleted
 			if util.ErrorFileNotFound(err) {
@@ -170,7 +179,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 	}
 
 	//finally, send it off to the server
-	err := SendEvent(globals, event)
+	err = SendEvent(globals, event)
 	if err != nil {
 		panic(err) //TODO handle sensibly
 	}
@@ -179,6 +188,9 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 	latestLocal := LockPath(event.Path, true)
 	defer UnlockPath(event)
+
+	//get the absolute path because we may need it later
+	absolutePath := path.Join(globals.syncDir, event.Path)
 
 	//if we already have this event, or if it is older than our most recent event, bail out
 	if latestLocal != nil {
@@ -224,7 +236,7 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 			if err != nil {
 				panic(err)
 			}
-			err = os.Rename(tmpfilename, event.Path)
+			err = os.Rename(tmpfilename, absolutePath)
 			if err != nil {
 				err := os.Remove(tmpfilename)
 				if err != nil {
@@ -234,14 +246,14 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 			}
 		}
 		if latestLocal == nil || event.Permissions != latestLocal.Permissions {
-			err := os.Chmod(event.Path, event.Permissions)
+			err := os.Chmod(absolutePath, event.Permissions)
 			if err != nil && !util.ErrorFileNotFound(err) {
 				panic(err)
 			}
 		}
 	} else {
 		//intentionally ignore errors in case this file has been deleted out from under us
-		os.Remove(event.Path)
+		os.Remove(absolutePath)
 		//TODO delete file hierarchy beneath this file if its the last one in its directory?
 	}
 
