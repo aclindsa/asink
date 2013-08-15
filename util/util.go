@@ -11,16 +11,31 @@ import (
 func EnsureDirExists(dir string) error {
 	_, err := os.Lstat(dir)
 	if err != nil {
-		fi, err := os.Lstat(path.Dir(dir))
+		var fi os.FileInfo
+		curDir := dir
+		for dir != "" && err != nil {
+			curDir = path.Dir(curDir)
+			fi, err = os.Lstat(curDir)
+		}
 		if err != nil {
 			return err
 		}
-		err = os.Mkdir(dir, fi.Mode().Perm())
+		err = os.MkdirAll(dir, fi.Mode().Perm())
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+//TODO maybe this shouldn't fail silently?
+func RecursiveRemoveEmptyDirs(dir string) {
+	var err error = nil
+	curDir := dir
+	for err == nil {
+		err = os.Remove(curDir)
+		curDir = path.Dir(curDir)
+	}
 }
 
 func CopyToTmp(src string, tmpdir string) (string, error) {

@@ -236,6 +236,13 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 			if err != nil {
 				panic(err)
 			}
+
+			//make sure containing directory exists
+			err = util.EnsureDirExists(path.Dir(absolutePath))
+			if err != nil {
+				panic(err)
+			}
+
 			err = os.Rename(tmpfilename, absolutePath)
 			if err != nil {
 				err2 := os.Remove(tmpfilename)
@@ -254,7 +261,8 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 	} else {
 		//intentionally ignore errors in case this file has been deleted out from under us
 		os.Remove(absolutePath)
-		//TODO delete file hierarchy beneath this file if its the last one in its directory?
+		//delete the directory previously containing this file if its the last file
+		util.RecursiveRemoveEmptyDirs(path.Dir(absolutePath))
 	}
 
 	//TODO make sure file being overwritten is either unchanged or already copied off and hashed
