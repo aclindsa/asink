@@ -34,6 +34,7 @@ func StartWatching(watchDir string, fileUpdates chan *asink.Event) {
 				if fi, err := os.Stat(ev.Name); err == nil && fi.IsDir() {
 					if ev.IsCreate() {
 						filepath.Walk(ev.Name, watchDirFn)
+						//TODO do a scan of this directory so we ensure any file events we missed before starting to watch this directory are caught
 					}
 					continue
 				}

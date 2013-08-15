@@ -142,10 +142,10 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 
 		//get the file's hash
 		hash, err := HashFile(tmpfilename)
-		event.Hash = hash
 		if err != nil {
 			panic(err)
 		}
+		event.Hash = hash
 
 		//If the file didn't actually change, squash this event
 		if latestLocal != nil && event.Hash == latestLocal.Hash {
@@ -231,16 +231,16 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 				panic(err)
 			}
 
-			//TODO copy hashed file to another tmp, then rename it to the actual file.
+			//copy hashed file to another tmp, then rename it to the actual file.
 			tmpfilename, err = util.CopyToTmp(hashedFilename, globals.tmpDir)
 			if err != nil {
 				panic(err)
 			}
 			err = os.Rename(tmpfilename, absolutePath)
 			if err != nil {
-				err := os.Remove(tmpfilename)
-				if err != nil {
-					panic(err)
+				err2 := os.Remove(tmpfilename)
+				if err2 != nil {
+					panic(err2)
 				}
 				panic(err)
 			}
