@@ -21,6 +21,12 @@ func StartWatching(watchDir string, fileUpdates chan *asink.Event) {
 			if err != nil {
 				panic("Failed to watch " + path)
 			}
+		} else if info.Mode().IsRegular() {
+			event := new(asink.Event)
+			event.Path = path
+			event.Type = asink.UPDATE
+			event.Timestamp = info.ModTime().UnixNano()
+			fileUpdates <- event
 		}
 		return nil
 	}

@@ -2,13 +2,17 @@ package main
 
 import (
 	"asink"
+	"asink/server"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 //global variables
@@ -34,15 +38,24 @@ func init() {
 func main() {
 	flag.Parse()
 
+	rpcTornDown := make(chan int)
+	go server.StartRPC(rpcTornDown)
+
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/events", eventHandler)
 	http.HandleFunc("/events/", eventHandler)
 
-	//TODO replace with http://golang.org/pkg/net/http/#ListenAndServeTLS
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	//TODO add HTTPS, something like http://golang.org/pkg/net/http/#ListenAndServeTLS
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
+	defer l.Close()
+	go http.Serve(l, nil)
+	//TODO handle errors from http.Serve?
+
+	server.WaitOnExit()
+	<-rpcTornDown
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -139,6 +152,19 @@ func putEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func eventHandler(w http.ResponseWriter, r *http.Request) {
+	user := AuthenticateUser(r)
+	if user == nil {
+		apiresponse := asink.APIResponse{
+			Status:      asink.ERROR,
+			Explanation: "This operation requires user authentication",
+		}
+		b, err := json.Marshal(apiresponse)
+		if err != nil {
+			b = []byte(err.Error())
+		}
+		w.Write(b)
+		return
+	}
 	if r.Method == "GET" {
 		//if GET, return any events later than (and including) the event id passed in
 		if sm := eventsRegexp.FindStringSubmatch(r.RequestURI); sm != nil {
@@ -162,5 +188,36 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		b, _ := json.Marshal(apiresponse)
 		w.Write(b)
+	}
+}
+
+func AuthenticateUser(r *http.Request) (user *server.User) {
+	h, ok := r.Header["Authorization"]
+	if !ok {
+		return nil
+	}
+	authparts := strings.Split(h[0], " ")
+	if len(authparts) != 2 || authparts[0] != "Basic" {
+		return nil
+	}
+
+	userpass, err := base64.StdEncoding.DecodeString(authparts[1])
+	if err != nil {
+		return nil
+	}
+	splituserpass := strings.Split(string(userpass), ":")
+	if len(splituserpass) != 2 {
+		return nil
+	}
+
+	user, err = adb.DatabaseGetUser(splituserpass[0])
+	if err != nil || user == nil {
+		return nil
+	}
+
+	if user.ValidPassword(splituserpass[1]) {
+		return user
+	} else {
+		return nil
 	}
 }

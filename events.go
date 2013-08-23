@@ -17,20 +17,22 @@ type EventStatus uint32
 
 const (
 	//Local event status flags
-	DISCARDED       = 1 << iota //event is to be discarded because it errored or is duplicate
+	DISCARDED = 1 << iota //event is to be discarded because it errored or is duplicate
 )
 
 type Event struct {
 	Id          int64
-	LocalId     int64
 	Type        EventType
-	Status      EventStatus
 	Path        string
 	Hash        string
 	Predecessor string
 	Timestamp   int64
 	Permissions os.FileMode
-	InDB        bool `json:"-"` //defaults to false. Omitted from json marshalling.
+	Username    string
+	Sharename   string
+	LocalStatus EventStatus `json:"-"`
+	LocalId     int64       `json:"-"`
+	InDB        bool        `json:"-"` //defaults to false. Omitted from json marshalling.
 }
 
 func (e *Event) IsUpdate() bool {

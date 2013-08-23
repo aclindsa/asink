@@ -121,7 +121,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		if err != nil {
 			//bail out if the file we are trying to upload already got deleted
 			if util.ErrorFileNotFound(err) {
-				event.Status |= asink.DISCARDED
+				event.LocalStatus |= asink.DISCARDED
 				return
 			}
 			panic(err)
@@ -132,7 +132,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		if err != nil {
 			//bail out if the file we are trying to upload already got deleted
 			if util.ErrorFileNotFound(err) {
-				event.Status |= asink.DISCARDED
+				event.LocalStatus |= asink.DISCARDED
 				return
 			}
 			panic(err)
@@ -150,7 +150,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		//If the file didn't actually change, squash this event
 		if latestLocal != nil && event.Hash == latestLocal.Hash {
 			os.Remove(tmpfilename)
-			event.Status |= asink.DISCARDED
+			event.LocalStatus |= asink.DISCARDED
 			return
 		}
 
@@ -173,7 +173,7 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 	} else {
 		//if we're trying to delete a file that we thought was already deleted, there's no need to delete it again
 		if latestLocal != nil && latestLocal.IsDelete() {
-			event.Status |= asink.DISCARDED
+			event.LocalStatus |= asink.DISCARDED
 			return
 		}
 	}
@@ -195,13 +195,15 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 	//if we already have this event, or if it is older than our most recent event, bail out
 	if latestLocal != nil {
 		if event.Timestamp < latestLocal.Timestamp || event.IsSameEvent(latestLocal) {
-			event.Status |= asink.DISCARDED
+			event.LocalStatus |= asink.DISCARDED
 			return
 		}
 
 		if latestLocal.Hash != event.Predecessor && latestLocal.Hash != event.Hash {
-			panic("conflict")
-			//TODO handle conflict
+			fmt.Printf("conflict:\n")
+			fmt.Printf("OLD %+v\n", latestLocal)
+			fmt.Printf("NEW %+v\n", event)
+			//TODO handle conflict?
 		}
 	}
 

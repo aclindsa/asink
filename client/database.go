@@ -37,7 +37,7 @@ func GetAndInitDB(config *conf.ConfigFile) (*AsinkDB, error) {
 	}
 	if !rows.Next() {
 		//if this is false, it means no rows were returned
-		tx.Exec("CREATE TABLE events (id INTEGER, localid INTEGER PRIMARY KEY ASC, type INTEGER, status INTEGER, path TEXT, hash TEXT, predecessor TEXT, timestamp INTEGER, permissions INTEGER);")
+		tx.Exec("CREATE TABLE events (id INTEGER, localid INTEGER PRIMARY KEY ASC, type INTEGER, localstatus INTEGER, path TEXT, hash TEXT, predecessor TEXT, timestamp INTEGER, permissions INTEGER);")
 		//		tx.Exec("CREATE INDEX IF NOT EXISTS localididx on events (localid)")
 		tx.Exec("CREATE INDEX IF NOT EXISTS ididx on events (id);")
 		tx.Exec("CREATE INDEX IF NOT EXISTS pathidx on events (path);")
@@ -66,7 +66,7 @@ func (adb *AsinkDB) DatabaseAddEvent(e *asink.Event) (err error) {
 		adb.lock.Unlock()
 	}()
 
-	result, err := tx.Exec("INSERT INTO events (id, type, status, path, hash, predecessor, timestamp, permissions) VALUES (?,?,?,?,?,?,?,?);", e.Id, e.Type, e.Status, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions)
+	result, err := tx.Exec("INSERT INTO events (id, type, localstatus, path, hash, predecessor, timestamp, permissions) VALUES (?,?,?,?,?,?,?,?);", e.Id, e.Type, e.LocalStatus, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (adb *AsinkDB) DatabaseUpdateEvent(e *asink.Event) (err error) {
 		adb.lock.Unlock()
 	}()
 
-	result, err := tx.Exec("UPDATE events SET id=?, type=?, status=?, path=?, hash=?, prececessor=?, timestamp=?, permissions=? WHERE localid=?;", e.Id, e.Type, e.Status, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions, e.LocalId)
+	result, err := tx.Exec("UPDATE events SET id=?, type=?, localstatus=?, path=?, hash=?, prececessor=?, timestamp=?, permissions=? WHERE localid=?;", e.Id, e.Type, e.LocalStatus, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions, e.LocalId)
 	if err != nil {
 		return err
 	}
@@ -127,10 +127,10 @@ func (adb *AsinkDB) DatabaseLatestEventForPath(path string) (event *asink.Event,
 	//make sure the database gets unlocked
 	defer adb.lock.Unlock()
 
-	row := adb.db.QueryRow("SELECT id, localid, type, status, path, hash, predecessor, timestamp, permissions FROM events WHERE path == ? ORDER BY timestamp DESC LIMIT 1;", path)
+	row := adb.db.QueryRow("SELECT id, localid, type, localstatus, path, hash, predecessor, timestamp, permissions FROM events WHERE path == ? ORDER BY timestamp DESC LIMIT 1;", path)
 
 	event = new(asink.Event)
-	err = row.Scan(&event.Id, &event.LocalId, &event.Type, &event.Status, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
+	err = row.Scan(&event.Id, &event.LocalId, &event.Type, &event.LocalStatus, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
 
 	switch {
 	case err == sql.ErrNoRows:
@@ -148,10 +148,10 @@ func (adb *AsinkDB) DatabaseLatestRemoteEvent() (event *asink.Event, err error) 
 	//make sure the database gets unlocked
 	defer adb.lock.Unlock()
 
-	row := adb.db.QueryRow("SELECT id, localid, type, status, path, hash, predecessor, timestamp, permissions FROM events WHERE id > 0 ORDER BY id DESC LIMIT 1;")
+	row := adb.db.QueryRow("SELECT id, localid, type, localstatus, path, hash, predecessor, timestamp, permissions FROM events WHERE id > 0 ORDER BY id DESC LIMIT 1;")
 
 	event = new(asink.Event)
-	err = row.Scan(&event.Id, &event.LocalId, &event.Type, &event.Status, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
+	err = row.Scan(&event.Id, &event.LocalId, &event.Type, &event.LocalStatus, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
 
 	switch {
 	case err == sql.ErrNoRows:
