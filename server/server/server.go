@@ -18,7 +18,7 @@ import (
 //global variables
 var eventsRegexp *regexp.Regexp
 var port int = 8080
-var adb *AsinkDB
+var adb *server.AsinkDB
 
 func init() {
 	var err error
@@ -29,7 +29,7 @@ func init() {
 
 	eventsRegexp = regexp.MustCompile("^/events/([0-9]+)$")
 
-	adb, err = GetAndInitDB()
+	adb, err = server.GetAndInitDB()
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +39,7 @@ func main() {
 	flag.Parse()
 
 	rpcTornDown := make(chan int)
-	go server.StartRPC(rpcTornDown)
+	go server.StartRPC(rpcTornDown, adb)
 
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/events", eventHandler)

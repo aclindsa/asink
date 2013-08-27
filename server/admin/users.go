@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"reflect"
+	"net/rpc"
 )
 
 type boolIsSetFlag struct {
@@ -66,10 +66,13 @@ func UserAdd(args []string) {
 	user.Username = flags.Arg(0)
 	user.PWHash = server.HashPassword(passwordOne)
 
-	fmt.Println(user)
 	i := 99
 	err = RPCCall("UserModifier.AddUser", user, &i)
 	if err != nil {
+		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.DuplicateUsernameErr.Error() {
+			fmt.Println("Error: "+err.Error())
+			return
+		}
 		panic(err)
 	}
 }
@@ -83,10 +86,13 @@ func UserDel(args []string) {
 	user := new(server.User)
 	user.Username = args[0]
 
-	fmt.Println(user)
 	i := 99
 	err := RPCCall("UserModifier.RemoveUser", user, &i)
 	if err != nil {
+		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.NoUserErr.Error() {
+			fmt.Println("Error: "+err.Error())
+			return
+		}
 		panic(err)
 	}
 }
@@ -105,8 +111,6 @@ func UserMod(args []string) {
 	flags.BoolVar(&rpcargs.UpdateLogin, "login", false, "Change the user's username")
 	flags.BoolVar(&rpcargs.UpdateLogin, "l", false, "Change the user's username (short version)")
 	flags.Parse(args)
-
-	//set the UpdateAdmin flag based on whether it was present on the command-line
 
 	if flags.NArg() != 1 {
 		fmt.Println("Error: please supply a username (and only one)")
@@ -136,6 +140,7 @@ func UserMod(args []string) {
 		rpcargs.Updated.PWHash = server.HashPassword(passwordOne)
 	}
 
+	//set the UpdateRole flag based on whether it was present on the command-line
 	rpcargs.UpdateRole = admin.IsSet
 	if admin.Value {
 		rpcargs.Updated.Role = server.ADMIN
@@ -143,11 +148,18 @@ func UserMod(args []string) {
 		rpcargs.Updated.Role = server.NORMAL
 	}
 
-	fmt.Println(rpcargs)
+	if !rpcargs.UpdateRole && !rpcargs.UpdateLogin && !rpcargs.UpdatePassword {
+		fmt.Println("What exactly are you modifying again?")
+		return
+	}
+
 	i := 99
 	err := RPCCall("UserModifier.ModifyUser", rpcargs, &i)
 	if err != nil {
-		fmt.Println(reflect.TypeOf(err))
+		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.NoUserErr.Error() {
+			fmt.Println("Error: "+err.Error())
+			return
+		}
 		panic(err)
 	}
 }

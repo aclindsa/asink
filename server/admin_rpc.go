@@ -1,13 +1,14 @@
 package server
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"net/rpc"
 )
 
-type UserModifier int
+type UserModifier struct {
+	adb *AsinkDB
+}
 
 type UserModifierArgs struct {
 	Current        *User
@@ -18,32 +19,58 @@ type UserModifierArgs struct {
 }
 
 func (u *UserModifier) AddUser(user *User, result *int) error {
-	fmt.Println("adding user: ", user)
-	ret := 0
-	result = &ret
-	return nil
+	err := u.adb.DatabaseAddUser(user)
+	if err != nil {
+		*result = 1
+	} else {
+		*result = 0
+	}
+	return err
 }
 
 func (u *UserModifier) ModifyUser(args *UserModifierArgs, result *int) error {
-	fmt.Println("modifying user: ", args)
-	fmt.Println("from: ", args.Current)
-	fmt.Println("to: ", args.Updated)
-	ret := 0
-	result = &ret
+	currentUser, err := u.adb.DatabaseGetUser(args.Current.Username)
+	if err != nil {
+		*result = 1
+		return err
+	}
+
+	if args.UpdateLogin {
+		currentUser.Username = args.Updated.Username
+	}
+	if args.UpdateRole {
+		currentUser.Role = args.Updated.Role
+	}
+	if args.UpdatePassword {
+		currentUser.PWHash = args.Updated.PWHash
+	}
+
+	err = u.adb.DatabaseUpdateUser(currentUser)
+	if err != nil {
+		*result = 1
+		return err
+	}
+
+	*result = 0
 	return nil
 }
 
 func (u *UserModifier) RemoveUser(user *User, result *int) error {
-	fmt.Println("removing user: ", user)
-	ret := 0
-	result = &ret
-	return nil
+	err := u.adb.DatabaseDeleteUser(user)
+	if err != nil {
+		*result = 1
+	} else {
+		*result = 0
+	}
+	return err
 }
 
-func StartRPC(townDown chan int) {
-	defer func() { townDown <- 0 }() //the main thread waits for this to ensure the socket is closed
+func StartRPC(tornDown chan int, adb *AsinkDB) {
+	defer func() { tornDown <- 0 }() //the main thread waits for this to ensure the socket is closed
 
 	usermod := new(UserModifier)
+	usermod.adb = adb
+
 	rpc.Register(usermod)
 	rpc.HandleHTTP()
 	l, err := net.Listen("unix", "/tmp/asink.sock")

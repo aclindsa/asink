@@ -1,8 +1,8 @@
-package main
+package server
 
 import (
 	"asink"
-	"asink/server"
+	"errors"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"sync"
@@ -12,6 +12,9 @@ type AsinkDB struct {
 	db   *sql.DB
 	lock sync.Mutex
 }
+
+var DuplicateUsernameErr = errors.New("Username already exists")
+var NoUserErr = errors.New("User doesn't exist")
 
 func GetAndInitDB() (*AsinkDB, error) {
 	dbLocation := "asink-server.db" //TODO make me configurable
@@ -46,7 +49,7 @@ func GetAndInitDB() (*AsinkDB, error) {
 	}
 	if !rows.Next() {
 		//if this is false, it means no rows were returned
-		tx.Exec("CREATE TABLE user (id INTEGER PRIMARY KEY ASC, username TEXT, pwhash TEXT, role INTEGER);")
+		tx.Exec("CREATE TABLE users (id INTEGER PRIMARY KEY ASC, username TEXT, pwhash TEXT, role INTEGER);")
 	} else {
 		rows.Close()
 	}
@@ -116,7 +119,7 @@ func (adb *AsinkDB) DatabaseRetrieveEvents(firstId uint64, maxEvents uint) (even
 	return events, nil
 }
 
-func (adb *AsinkDB) DatabaseAddUser(u *server.User) (err error) {
+func (adb *AsinkDB) DatabaseAddUser(u *User) (err error) {
 	adb.lock.Lock()
 	tx, err := adb.db.Begin()
 	if err != nil {
@@ -131,11 +134,24 @@ func (adb *AsinkDB) DatabaseAddUser(u *server.User) (err error) {
 		adb.lock.Unlock()
 	}()
 
-	result, err := tx.Exec("INSERT INTO users (username, pwhash, role) VALUES (?,?);", u.Username, u.PWHash, u.Role)
+	//make sure the username we're switching to doesn't already exist in the database
+	existingUsername := ""
+	row := tx.QueryRow("SELECT username FROM users WHERE username == ?;", u.Username)
+	err = row.Scan(&existingUsername)
+	switch {
+	case err == sql.ErrNoRows:
+		//keep going
+	case err != nil:
+		return err
+	default:
+		return DuplicateUsernameErr
+	}
+
+	result, err := tx.Exec("INSERT INTO users (username, pwhash, role) VALUES (?,?,?);", u.Username, u.PWHash, u.Role)
 	if err != nil {
 		return err
 	}
-	id, err := result.LastInsertId()
+	u.Id, err = result.LastInsertId()
 	if err != nil {
 		return err
 	}
@@ -144,23 +160,63 @@ func (adb *AsinkDB) DatabaseAddUser(u *server.User) (err error) {
 		return err
 	}
 
-	u.Id = id
 	return nil
 }
 
-func (adb *AsinkDB) DatabaseGetUser(username string) (user *server.User, err error) {
+//set attributes for the user with the same Id as *u
+func (adb *AsinkDB) DatabaseUpdateUser(u *User) (err error) {
+	adb.lock.Lock()
+	tx, err := adb.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	//make sure the transaction gets rolled back on error, and the database gets unlocked
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+		adb.lock.Unlock()
+	}()
+
+	//make sure the username we're switching to doesn't already exist in the database
+	existingUsername := ""
+	row := tx.QueryRow("SELECT username FROM users WHERE username == ? AND id != ?;", u.Username, u.Id)
+	err = row.Scan(&existingUsername)
+	switch {
+	case err == sql.ErrNoRows:
+		//keep going
+	case err != nil:
+		return err
+	default:
+		return DuplicateUsernameErr
+	}
+
+	_, err = tx.Exec("UPDATE users SET username=?, pwhash=?, role=? WHERE id=?;", u.Username, u.PWHash, u.Role, u.Id)
+	if err != nil {
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (adb *AsinkDB) DatabaseGetUser(username string) (user *User, err error) {
 	adb.lock.Lock()
 	//make sure the database gets unlocked
 	defer adb.lock.Unlock()
 
 	row := adb.db.QueryRow("SELECT id, username, pwhash, role FROM users WHERE username == ?;", username)
 
-	user = new(server.User)
+	user = new(User)
 	err = row.Scan(&user.Id, &user.Username, &user.PWHash, &user.Role)
 
 	switch {
 	case err == sql.ErrNoRows:
-		return nil, nil
+		return nil, NoUserErr
 	case err != nil:
 		return nil, err
 	default:
@@ -168,4 +224,38 @@ func (adb *AsinkDB) DatabaseGetUser(username string) (user *server.User, err err
 	}
 }
 
+func (adb *AsinkDB) DatabaseDeleteUser(u *User) (err error) {
+	adb.lock.Lock()
+	tx, err := adb.db.Begin()
+	if err != nil {
+		return err
+	}
 
+	//make sure the transaction gets rolled back on error, and the database gets unlocked
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+		adb.lock.Unlock()
+	}()
+
+	res, err := tx.Exec("DELETE FROM users WHERE username=?;", u.Username)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return NoUserErr
+	} else if rows > 1 {
+		return errors.New("Error: attempting to delete user by username, but more than row will be affected: " + u.Username)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
