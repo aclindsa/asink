@@ -5,9 +5,9 @@ import (
 	"code.google.com/p/gopass"
 	"flag"
 	"fmt"
+	"net/rpc"
 	"os"
 	"strconv"
-	"net/rpc"
 )
 
 type boolIsSetFlag struct {
@@ -70,7 +70,7 @@ func UserAdd(args []string) {
 	err = RPCCall("UserModifier.AddUser", user, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.DuplicateUsernameErr.Error() {
-			fmt.Println("Error: "+err.Error())
+			fmt.Println("Error: " + err.Error())
 			return
 		}
 		panic(err)
@@ -90,7 +90,7 @@ func UserDel(args []string) {
 	err := RPCCall("UserModifier.RemoveUser", user, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.NoUserErr.Error() {
-			fmt.Println("Error: "+err.Error())
+			fmt.Println("Error: " + err.Error())
 			return
 		}
 		panic(err)
@@ -157,7 +157,7 @@ func UserMod(args []string) {
 	err := RPCCall("UserModifier.ModifyUser", rpcargs, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.NoUserErr.Error() {
-			fmt.Println("Error: "+err.Error())
+			fmt.Println("Error: " + err.Error())
 			return
 		}
 		panic(err)

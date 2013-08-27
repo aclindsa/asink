@@ -2,8 +2,8 @@ package server
 
 import (
 	"asink"
-	"errors"
 	"database/sql"
+	"errors"
 	_ "github.com/mattn/go-sqlite3"
 	"sync"
 )
