@@ -46,7 +46,7 @@ func main() {
 
 	//make sure config file's permissions are read-write only for the current user
 	if !util.FileExistsAndHasPermissions(globals.configFileName, 384 /*0b110000000*/) {
-		fmt.Println("Error: Either the file at "+globals.configFileName+" doesn't exist, or it doesn't have permissions such that the current user is the only one allowed to read and write.")
+		fmt.Println("Error: Either the file at " + globals.configFileName + " doesn't exist, or it doesn't have permissions such that the current user is the only one allowed to read and write.")
 		return
 	}
 
