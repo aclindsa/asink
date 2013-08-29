@@ -154,6 +154,7 @@ func putEvents(w http.ResponseWriter, r *http.Request, user *server.User) {
 func eventHandler(w http.ResponseWriter, r *http.Request) {
 	user := AuthenticateUser(r)
 	if user == nil {
+		w.Header().Set("WWW-Authenticate", "Basic realm=\"Asink Server\"")
 		apiresponse := asink.APIResponse{
 			Status:      asink.ERROR,
 			Explanation: "This operation requires user authentication",
@@ -162,6 +163,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			b = []byte(err.Error())
 		}
+		w.WriteHeader(401)
 		w.Write(b)
 		return
 	}
