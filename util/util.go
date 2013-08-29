@@ -28,6 +28,14 @@ func EnsureDirExists(dir string) error {
 	return nil
 }
 
+func FileExistsAndHasPermissions(file string, mode os.FileMode) bool {
+	info, err := os.Stat(file)
+	if err != nil {
+		return false
+	}
+	return info.Mode().Perm() == mode
+}
+
 //TODO maybe this shouldn't fail silently?
 func RecursiveRemoveEmptyDirs(dir string) {
 	var err error = nil

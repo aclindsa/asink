@@ -62,7 +62,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "You're probably looking for /events/")
 }
 
-func getEvents(w http.ResponseWriter, r *http.Request, nextEvent uint64) {
+func getEvents(w http.ResponseWriter, r *http.Request, user *server.User, nextEvent uint64) {
 	var events []*asink.Event
 	var error_message string = ""
 	defer func() {
@@ -86,7 +86,7 @@ func getEvents(w http.ResponseWriter, r *http.Request, nextEvent uint64) {
 		w.Write(b)
 	}()
 
-	events, err := adb.DatabaseRetrieveEvents(nextEvent, 50)
+	events, err := adb.DatabaseRetrieveEvents(nextEvent, 50, user)
 	if err != nil {
 		panic(err)
 		error_message = err.Error()
@@ -96,7 +96,7 @@ func getEvents(w http.ResponseWriter, r *http.Request, nextEvent uint64) {
 	//long-poll if events is empty
 	if len(events) == 0 {
 		c := make(chan *asink.Event)
-		addPoller("aclindsa", &c) //TODO support more than one user
+		addPoller(user.Id, &c) //TODO support more than one share per user
 		e, ok := <-c
 		if ok {
 			events = append(events, e)
@@ -104,7 +104,7 @@ func getEvents(w http.ResponseWriter, r *http.Request, nextEvent uint64) {
 	}
 }
 
-func putEvents(w http.ResponseWriter, r *http.Request) {
+func putEvents(w http.ResponseWriter, r *http.Request, user *server.User) {
 	var events asink.EventList
 	var error_message string = ""
 	defer func() {
@@ -138,7 +138,7 @@ func putEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, event := range events.Events {
-		err = adb.DatabaseAddEvent(event)
+		err = adb.DatabaseAddEvent(user, event)
 		if err != nil {
 			//TODO should probably do this in a way that the caller knows how many of these have failed and doesn't re-try sending ones that succeeded
 			//i.e. add this to the return codes or something
@@ -148,7 +148,7 @@ func putEvents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	broadcastToPollers("aclindsa", events.Events[0]) //TODO support more than one user
+	broadcastToPollers(user.Id, events.Events[0]) //TODO support more than one user
 }
 
 func eventHandler(w http.ResponseWriter, r *http.Request) {
@@ -172,15 +172,15 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				//TODO display error message here instead
 				fmt.Printf("ERROR parsing " + sm[1] + "\n")
-				getEvents(w, r, 0)
+				getEvents(w, r, user, 0)
 			} else {
-				getEvents(w, r, i)
+				getEvents(w, r, user, i)
 			}
 		} else {
-			getEvents(w, r, 0)
+			getEvents(w, r, user, 0)
 		}
 	} else if r.Method == "POST" {
-		putEvents(w, r)
+		putEvents(w, r, user)
 	} else {
 		apiresponse := asink.APIResponse{
 			Status:      asink.ERROR,

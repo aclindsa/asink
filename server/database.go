@@ -64,7 +64,7 @@ func GetAndInitDB() (*AsinkDB, error) {
 	return ret, nil
 }
 
-func (adb *AsinkDB) DatabaseAddEvent(e *asink.Event) (err error) {
+func (adb *AsinkDB) DatabaseAddEvent(u *User, e *asink.Event) (err error) {
 	adb.lock.Lock()
 	tx, err := adb.db.Begin()
 	if err != nil {
@@ -79,7 +79,7 @@ func (adb *AsinkDB) DatabaseAddEvent(e *asink.Event) (err error) {
 		adb.lock.Unlock()
 	}()
 
-	result, err := tx.Exec("INSERT INTO events (userid, type, path, hash, predecessor, timestamp, permissions) VALUES (?,?,?,?,?,?,?,?);", e.Type, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions)
+	result, err := tx.Exec("INSERT INTO events (userid, type, path, hash, predecessor, timestamp, permissions) VALUES (?,?,?,?,?,?,?);", u.Id, e.Type, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions)
 	if err != nil {
 		return err
 	}
@@ -97,13 +97,13 @@ func (adb *AsinkDB) DatabaseAddEvent(e *asink.Event) (err error) {
 	return nil
 }
 
-func (adb *AsinkDB) DatabaseRetrieveEvents(firstId uint64, maxEvents uint) (events []*asink.Event, err error) {
+func (adb *AsinkDB) DatabaseRetrieveEvents(firstId uint64, maxEvents uint, u *User) (events []*asink.Event, err error) {
 	adb.lock.Lock()
 	//make sure the database gets unlocked on return
 	defer func() {
 		adb.lock.Unlock()
 	}()
-	rows, err := adb.db.Query("SELECT id, type, path, hash, predecessor, timestamp, permissions FROM events WHERE id >= ? ORDER BY id ASC LIMIT ?;", firstId, maxEvents)
+	rows, err := adb.db.Query("SELECT id, type, path, hash, predecessor, timestamp, permissions FROM events WHERE userid = ? AND id >= ? ORDER BY id ASC LIMIT ?;", u.Id, firstId, maxEvents)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -14,6 +15,25 @@ import (
 
 const MIN_ERROR_WAIT = 100   // 1/10 of a second
 const MAX_ERROR_WAIT = 10000 // 10 seconds
+
+func AuthenticatedRequest(method, url, bodyType string, body io.Reader, username, password string) (*http.Response, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+	if bodyType != "" {
+		req.Header.Set("Content-Type", bodyType)
+	}
+	req.SetBasicAuth(username, password)
+	return client.Do(req)
+}
+func AuthenticatedGet(url string, username, password string) (*http.Response, error) {
+	return AuthenticatedRequest("GET", url, "", nil, username, password)
+}
+func AuthenticatedPost(url, bodyType string, body io.Reader, username, password string) (*http.Response, error) {
+	return AuthenticatedRequest("POST", url, bodyType, body, username, password)
+}
 
 func SendEvent(globals AsinkGlobals, event *asink.Event) error {
 	url := "http://" + globals.server + ":" + strconv.Itoa(int(globals.port)) + "/events/"
@@ -28,7 +48,7 @@ func SendEvent(globals AsinkGlobals, event *asink.Event) error {
 	}
 
 	//actually make the request
-	resp, err := http.Post(url, "application/json", bytes.NewReader(b))
+	resp, err := AuthenticatedPost(url, "application/json", bytes.NewReader(b), globals.username, globals.password)
 	if err != nil {
 		return err
 	}
@@ -80,7 +100,7 @@ func GetEvents(globals AsinkGlobals, events chan *asink.Event) {
 		} else {
 			fullUrl = url + "0"
 		}
-		resp, err := http.Get(fullUrl)
+		resp, err := AuthenticatedGet(fullUrl, globals.username, globals.password)
 
 		//if error, perform exponential backoff (with maximum timeout)
 		if err != nil {

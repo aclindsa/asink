@@ -22,6 +22,8 @@ type AsinkGlobals struct {
 	storage        Storage
 	server         string
 	port           int
+	username       string
+	password       string
 }
 
 var globals AsinkGlobals
@@ -41,6 +43,12 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	//make sure config file's permissions are read-write only for the current user
+	if !util.FileExistsAndHasPermissions(globals.configFileName, 384 /*0b110000000*/) {
+		fmt.Println("Error: Either the file at "+globals.configFileName+" doesn't exist, or it doesn't have permissions such that the current user is the only one allowed to read and write.")
+		return
+	}
 
 	config, err := conf.ReadConfigFile(globals.configFileName)
 	if err != nil {
@@ -73,8 +81,11 @@ func main() {
 		panic(err)
 	}
 
+	//TODO check errors on server settings
 	globals.server, err = config.GetString("server", "host")
 	globals.port, err = config.GetInt("server", "port")
+	globals.username, err = config.GetString("server", "username")
+	globals.password, err = config.GetString("server", "password")
 
 	globals.db, err = GetAndInitDB(config)
 	if err != nil {

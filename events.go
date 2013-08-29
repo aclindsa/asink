@@ -29,7 +29,7 @@ type Event struct {
 	Timestamp   int64
 	Permissions os.FileMode
 	Username    string
-	Sharename   string
+	Sharename   string //TODO start differentiating between a users' different shares
 	LocalStatus EventStatus `json:"-"`
 	LocalId     int64       `json:"-"`
 	InDB        bool        `json:"-"` //defaults to false. Omitted from json marshalling.

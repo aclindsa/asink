@@ -13,17 +13,17 @@ type LongPollGroup struct {
 
 type PollingManager struct {
 	lock   sync.RWMutex
-	groups map[string]*LongPollGroup
+	groups map[int64]*LongPollGroup
 }
 
 var pm *PollingManager
 
 func init() {
 	pm = new(PollingManager)
-	pm.groups = make(map[string]*LongPollGroup)
+	pm.groups = make(map[int64]*LongPollGroup)
 }
 
-func addPoller(uid string, channel *chan *asink.Event) {
+func addPoller(uid int64, channel *chan *asink.Event) {
 	pm.lock.RLock()
 
 	group := pm.groups[uid]
@@ -57,7 +57,7 @@ func addPoller(uid string, channel *chan *asink.Event) {
 	})
 }
 
-func broadcastToPollers(uid string, event *asink.Event) {
+func broadcastToPollers(uid int64, event *asink.Event) {
 	//store off the long polling group we're trying to send to and remove
 	//it from PollingManager.groups
 	pm.lock.Lock()
