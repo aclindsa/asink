@@ -24,8 +24,13 @@ func GetStorage(config *conf.ConfigFile) (Storage, error) {
 		if err != nil {
 			return nil, err
 		}
+	case "ftp":
+		storage, err = NewFTPStorage(config)
+		if err != nil {
+			return nil, err
+		}
 	default:
-		return nil, errors.New("Error: storage method '" + storageMethod + "' not implemented.")
+		return nil, errors.New("Error: storage method '" + storageMethod + "' not found.")
 	}
 
 	return storage, nil
