@@ -88,7 +88,6 @@ func getEvents(w http.ResponseWriter, r *http.Request, user *server.User, nextEv
 
 	events, err := adb.DatabaseRetrieveEvents(nextEvent, 50, user)
 	if err != nil {
-		panic(err)
 		error_message = err.Error()
 		return
 	}
