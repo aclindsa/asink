@@ -5,24 +5,29 @@ import (
 	"os"
 )
 
-type AdminCommand struct {
+type Command struct {
 	cmd         string
 	fn          func(args []string)
 	explanation string
 }
 
-var commands []AdminCommand = []AdminCommand{
-	AdminCommand{
+var commands []Command = []Command{
+	Command{
+		cmd:         "start",
+		fn:          StartServer,
+		explanation: "Start the server daemon",
+	},
+	Command{
 		cmd:         "useradd",
 		fn:          UserAdd,
 		explanation: "Add a user",
 	},
-	AdminCommand{
+	Command{
 		cmd:         "userdel",
 		fn:          UserDel,
 		explanation: "Remove a user",
 	},
-	AdminCommand{
+	Command{
 		cmd:         "usermod",
 		fn:          UserMod,
 		explanation: "Modify a user",

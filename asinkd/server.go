@@ -2,7 +2,6 @@ package main
 
 import (
 	"asink"
-	"asink/server"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -18,28 +17,30 @@ import (
 //global variables
 var eventsRegexp *regexp.Regexp
 var port int = 8080
-var adb *server.AsinkDB
+var adb *AsinkDB
 
 func init() {
 	var err error
-	const port_usage = "Port on which to serve HTTP API"
-
-	flag.IntVar(&port, "port", 8080, port_usage)
-	flag.IntVar(&port, "p", 8080, port_usage+" (shorthand)")
 
 	eventsRegexp = regexp.MustCompile("^/events/([0-9]+)$")
 
-	adb, err = server.GetAndInitDB()
+	adb, err = GetAndInitDB()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func main() {
-	flag.Parse()
+func StartServer(args []string) {
+	const port_usage = "Port on which to serve HTTP API"
+
+	flags := flag.NewFlagSet("start", flag.ExitOnError)
+	flags.IntVar(&port, "port", 8080, port_usage)
+	flags.IntVar(&port, "p", 8080, port_usage+" (shorthand)")
+
+	flags.Parse(args)
 
 	rpcTornDown := make(chan int)
-	go server.StartRPC(rpcTornDown, adb)
+	go StartRPC(rpcTornDown, adb)
 
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/events", eventHandler)
@@ -54,7 +55,7 @@ func main() {
 	go http.Serve(l, nil)
 	//TODO handle errors from http.Serve?
 
-	server.WaitOnExit()
+	WaitOnExit()
 	<-rpcTornDown
 }
 
@@ -62,7 +63,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "You're probably looking for /events/")
 }
 
-func getEvents(w http.ResponseWriter, r *http.Request, user *server.User, nextEvent uint64) {
+func getEvents(w http.ResponseWriter, r *http.Request, user *User, nextEvent uint64) {
 	var events []*asink.Event
 	var error_message string = ""
 	defer func() {
@@ -103,7 +104,7 @@ func getEvents(w http.ResponseWriter, r *http.Request, user *server.User, nextEv
 	}
 }
 
-func putEvents(w http.ResponseWriter, r *http.Request, user *server.User) {
+func putEvents(w http.ResponseWriter, r *http.Request, user *User) {
 	var events asink.EventList
 	var error_message string = ""
 	defer func() {
@@ -192,7 +193,7 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func AuthenticateUser(r *http.Request) (user *server.User) {
+func AuthenticateUser(r *http.Request) (user *User) {
 	h, ok := r.Header["Authorization"]
 	if !ok {
 		return nil

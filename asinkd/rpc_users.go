@@ -1,7 +1,6 @@
 package main
 
 import (
-	"asink/server"
 	"code.google.com/p/gopass"
 	"flag"
 	"fmt"
@@ -56,20 +55,20 @@ func UserAdd(args []string) {
 		os.Exit(1)
 	}
 
-	user := new(server.User)
+	user := new(User)
 
 	if *admin {
-		user.Role = server.ADMIN
+		user.Role = ADMIN
 	} else {
-		user.Role = server.NORMAL
+		user.Role = NORMAL
 	}
 	user.Username = flags.Arg(0)
-	user.PWHash = server.HashPassword(passwordOne)
+	user.PWHash = HashPassword(passwordOne)
 
 	i := 99
 	err = RPCCall("UserModifier.AddUser", user, &i)
 	if err != nil {
-		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.DuplicateUsernameErr.Error() {
+		if _, ok := err.(rpc.ServerError); ok && err.Error() == DuplicateUsernameErr.Error() {
 			fmt.Println("Error: " + err.Error())
 			return
 		}
@@ -83,13 +82,13 @@ func UserDel(args []string) {
 		os.Exit(1)
 	}
 
-	user := new(server.User)
+	user := new(User)
 	user.Username = args[0]
 
 	i := 99
 	err := RPCCall("UserModifier.RemoveUser", user, &i)
 	if err != nil {
-		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.NoUserErr.Error() {
+		if _, ok := err.(rpc.ServerError); ok && err.Error() == NoUserErr.Error() {
 			fmt.Println("Error: " + err.Error())
 			return
 		}
@@ -98,9 +97,9 @@ func UserDel(args []string) {
 }
 
 func UserMod(args []string) {
-	rpcargs := new(server.UserModifierArgs)
-	rpcargs.Current = new(server.User)
-	rpcargs.Updated = new(server.User)
+	rpcargs := new(UserModifierArgs)
+	rpcargs.Current = new(User)
+	rpcargs.Updated = new(User)
 
 	admin := newBoolIsSetFlag(false)
 
@@ -137,15 +136,15 @@ func UserMod(args []string) {
 			fmt.Println("Error: Passwords do not match. Please try again.")
 			os.Exit(1)
 		}
-		rpcargs.Updated.PWHash = server.HashPassword(passwordOne)
+		rpcargs.Updated.PWHash = HashPassword(passwordOne)
 	}
 
 	//set the UpdateRole flag based on whether it was present on the command-line
 	rpcargs.UpdateRole = admin.IsSet
 	if admin.Value {
-		rpcargs.Updated.Role = server.ADMIN
+		rpcargs.Updated.Role = ADMIN
 	} else {
-		rpcargs.Updated.Role = server.NORMAL
+		rpcargs.Updated.Role = NORMAL
 	}
 
 	if !rpcargs.UpdateRole && !rpcargs.UpdateLogin && !rpcargs.UpdatePassword {
@@ -156,7 +155,7 @@ func UserMod(args []string) {
 	i := 99
 	err := RPCCall("UserModifier.ModifyUser", rpcargs, &i)
 	if err != nil {
-		if _, ok := err.(rpc.ServerError); ok && err.Error() == server.NoUserErr.Error() {
+		if _, ok := err.(rpc.ServerError); ok && err.Error() == NoUserErr.Error() {
 			fmt.Println("Error: " + err.Error())
 			return
 		}
