@@ -18,6 +18,11 @@ var commands []Command = []Command{
 		explanation: "Start the server daemon",
 	},
 	Command{
+		cmd:         "stop",
+		fn:          StopServer,
+		explanation: "Stop the server daemon",
+	},
+	Command{
 		cmd:         "useradd",
 		fn:          UserAdd,
 		explanation: "Add a user",

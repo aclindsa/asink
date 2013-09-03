@@ -7,8 +7,7 @@ import (
 	"syscall"
 )
 
-func RPCCall(method string, args interface{}, reply interface{}) error {
-	socket := "/tmp/asink.sock"
+func RPCCall(socket, method string, args interface{}, reply interface{}) error {
 	client, err := rpc.DialHTTP("unix", socket)
 	if err != nil {
 		if err2, ok := err.(*net.OpError); ok {

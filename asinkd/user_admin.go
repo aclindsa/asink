@@ -27,6 +27,9 @@ func (b *boolIsSetFlag) Set(value string) error {
 	return err
 }
 
+const rpcSocketDefault = "/var/run/asink/asinkd.sock"
+const rpcSocketDescription = "Socket to use to connect to the Asink server."
+
 func (b *boolIsSetFlag) String() string { return fmt.Sprintf("%v", *b) }
 
 func (b *boolIsSetFlag) IsBoolFlag() bool { return true }
@@ -34,6 +37,7 @@ func (b *boolIsSetFlag) IsBoolFlag() bool { return true }
 func UserAdd(args []string) {
 	flags := flag.NewFlagSet("useradd", flag.ExitOnError)
 	admin := flags.Bool("admin", false, "User should be an administrator")
+	rpcSocket := flags.String("sock", rpcSocketDefault, rpcSocketDescription)
 	flags.Parse(args)
 
 	if flags.NArg() != 1 {
@@ -66,7 +70,7 @@ func UserAdd(args []string) {
 	user.PWHash = HashPassword(passwordOne)
 
 	i := 99
-	err = RPCCall("UserModifier.AddUser", user, &i)
+	err = RPCCall(*rpcSocket, "UserModifier.AddUser", user, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == DuplicateUsernameErr.Error() {
 			fmt.Println("Error: " + err.Error())
@@ -77,7 +81,11 @@ func UserAdd(args []string) {
 }
 
 func UserDel(args []string) {
-	if len(args) != 1 {
+	flags := flag.NewFlagSet("userdel", flag.ExitOnError)
+	rpcSocket := flags.String("sock", rpcSocketDefault, rpcSocketDescription)
+	flags.Parse(args)
+
+	if flags.NArg() != 1 {
 		fmt.Println("Error: please supply a username (and only one)")
 		os.Exit(1)
 	}
@@ -86,7 +94,7 @@ func UserDel(args []string) {
 	user.Username = args[0]
 
 	i := 99
-	err := RPCCall("UserModifier.RemoveUser", user, &i)
+	err := RPCCall(*rpcSocket, "UserModifier.RemoveUser", user, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == NoUserErr.Error() {
 			fmt.Println("Error: " + err.Error())
@@ -109,6 +117,7 @@ func UserMod(args []string) {
 	flags.BoolVar(&rpcargs.UpdatePassword, "p", false, "Change the user's password (short version)")
 	flags.BoolVar(&rpcargs.UpdateLogin, "login", false, "Change the user's username")
 	flags.BoolVar(&rpcargs.UpdateLogin, "l", false, "Change the user's username (short version)")
+	rpcSocket := flags.String("sock", rpcSocketDefault, rpcSocketDescription)
 	flags.Parse(args)
 
 	if flags.NArg() != 1 {
@@ -153,7 +162,7 @@ func UserMod(args []string) {
 	}
 
 	i := 99
-	err := RPCCall("UserModifier.ModifyUser", rpcargs, &i)
+	err := RPCCall(*rpcSocket, "UserModifier.ModifyUser", rpcargs, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == NoUserErr.Error() {
 			fmt.Println("Error: " + err.Error())

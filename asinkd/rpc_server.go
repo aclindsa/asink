@@ -65,15 +65,26 @@ func (u *UserModifier) RemoveUser(user *User, result *int) error {
 	return err
 }
 
-func StartRPC(tornDown chan int, adb *AsinkDB) {
+type ServerStopper int
+
+func (s *ServerStopper) StopServer(code *int, result *int) error {
+	Exit(*code)
+	*result = 0
+	return nil
+}
+
+func StartRPC(sock string, tornDown chan int, adb *AsinkDB) {
 	defer func() { tornDown <- 0 }() //the main thread waits for this to ensure the socket is closed
 
 	usermod := new(UserModifier)
 	usermod.adb = adb
-
 	rpc.Register(usermod)
+
+	serverstop := new(ServerStopper)
+	rpc.Register(serverstop)
+
 	rpc.HandleHTTP()
-	l, err := net.Listen("unix", "/tmp/asink.sock")
+	l, err := net.Listen("unix", sock)
 	if err != nil {
 		panic(err)
 	}

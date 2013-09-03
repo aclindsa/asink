@@ -13,6 +13,7 @@ var exitWaiterChan chan int
 func init() {
 	exitWaiterCount = 0
 	exitWaiterChan = make(chan int)
+	exitCalled = make(chan int)
 	go setupCleanExitOnSignals()
 }
 

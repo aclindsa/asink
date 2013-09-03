@@ -17,6 +17,7 @@ import (
 //global variables
 var eventsRegexp *regexp.Regexp
 var port int = 8080
+var rpcSock string
 var adb *AsinkDB
 
 func init() {
@@ -30,17 +31,21 @@ func init() {
 	}
 }
 
+const sock_usage = "Socket to use to connect to the Asink server."
+const sock_default = "/var/run/asink/asinkd.sock"
+
 func StartServer(args []string) {
 	const port_usage = "Port on which to serve HTTP API"
 
 	flags := flag.NewFlagSet("start", flag.ExitOnError)
 	flags.IntVar(&port, "port", 8080, port_usage)
 	flags.IntVar(&port, "p", 8080, port_usage+" (shorthand)")
-
+	flags.StringVar(&rpcSock, "sock", sock_default, sock_usage)
+	flags.StringVar(&rpcSock, "s", sock_default, sock_usage+" (shorthand)")
 	flags.Parse(args)
 
 	rpcTornDown := make(chan int)
-	go StartRPC(rpcTornDown, adb)
+	go StartRPC(rpcSock, rpcTornDown, adb)
 
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/events", eventHandler)
@@ -57,6 +62,20 @@ func StartServer(args []string) {
 
 	WaitOnExit()
 	<-rpcTornDown
+}
+
+func StopServer(args []string) {
+	flags := flag.NewFlagSet("stop", flag.ExitOnError)
+	flags.StringVar(&rpcSock, "sock", sock_default, sock_usage)
+	flags.StringVar(&rpcSock, "s", sock_default, sock_usage+" (shorthand)")
+	flags.Parse(args)
+
+	i := 99
+	returnCode := 0
+	err := RPCCall(rpcSock, "ServerStopper.StopServer", &returnCode, &i)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
