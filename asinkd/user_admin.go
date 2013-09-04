@@ -1,6 +1,7 @@
 package main
 
 import (
+	"asink"
 	"code.google.com/p/gopass"
 	"flag"
 	"fmt"
@@ -70,7 +71,7 @@ func UserAdd(args []string) {
 	user.PWHash = HashPassword(passwordOne)
 
 	i := 99
-	err = RPCCall(*rpcSocket, "UserModifier.AddUser", user, &i)
+	err = asink.RPCCall(*rpcSocket, "UserModifier.AddUser", user, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == DuplicateUsernameErr.Error() {
 			fmt.Println("Error: " + err.Error())
@@ -94,7 +95,7 @@ func UserDel(args []string) {
 	user.Username = args[0]
 
 	i := 99
-	err := RPCCall(*rpcSocket, "UserModifier.RemoveUser", user, &i)
+	err := asink.RPCCall(*rpcSocket, "UserModifier.RemoveUser", user, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == NoUserErr.Error() {
 			fmt.Println("Error: " + err.Error())
@@ -162,7 +163,7 @@ func UserMod(args []string) {
 	}
 
 	i := 99
-	err := RPCCall(*rpcSocket, "UserModifier.ModifyUser", rpcargs, &i)
+	err := asink.RPCCall(*rpcSocket, "UserModifier.ModifyUser", rpcargs, &i)
 	if err != nil {
 		if _, ok := err.(rpc.ServerError); ok && err.Error() == NoUserErr.Error() {
 			fmt.Println("Error: " + err.Error())

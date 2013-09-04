@@ -74,7 +74,7 @@ func StopServer(args []string) {
 
 	i := 99
 	returnCode := 0
-	err := RPCCall(rpcSock, "ServerStopper.StopServer", &returnCode, &i)
+	err := asink.RPCCall(rpcSock, "ServerStopper.StopServer", &returnCode, &i)
 	if err != nil {
 		panic(err)
 	}
