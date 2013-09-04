@@ -1,6 +1,7 @@
 package main
 
 import (
+	"asink"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -68,7 +69,7 @@ func (u *UserModifier) RemoveUser(user *User, result *int) error {
 type ServerStopper int
 
 func (s *ServerStopper) StopServer(code *int, result *int) error {
-	Exit(*code)
+	asink.Exit(*code)
 	*result = 0
 	return nil
 }
@@ -92,5 +93,5 @@ func StartRPC(sock string, tornDown chan int, adb *AsinkDB) {
 
 	go http.Serve(l, nil)
 
-	WaitOnExit()
+	asink.WaitOnExit()
 }

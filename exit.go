@@ -1,4 +1,4 @@
-package main
+package asink
 
 import (
 	"os"
@@ -14,9 +14,11 @@ func init() {
 	exitWaiterCount = 0
 	exitWaiterChan = make(chan int)
 	exitCalled = make(chan int)
-	go setupCleanExitOnSignals()
 }
 
+func SetupCleanExitOnSignals() {
+	go setupCleanExitOnSignals()
+}
 func setupCleanExitOnSignals() {
 	//wait to properly close the socket when we're exiting
 	exitCode := 0

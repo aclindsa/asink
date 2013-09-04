@@ -29,6 +29,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	asink.SetupCleanExitOnSignals()
 }
 
 const sock_usage = "Socket to use to connect to the Asink server."
@@ -60,7 +62,7 @@ func StartServer(args []string) {
 	go http.Serve(l, nil)
 	//TODO handle errors from http.Serve?
 
-	WaitOnExit()
+	asink.WaitOnExit()
 	<-rpcTornDown
 }
 
