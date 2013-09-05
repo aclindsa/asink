@@ -315,7 +315,7 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 
 func ProcessRemoteEvents(globals AsinkGlobals, eventChan chan *asink.Event) {
 	for event := range eventChan {
-		ProcessRemoteEvent(globals, event)
+		go ProcessRemoteEvent(globals, event)
 	}
 }
 
