@@ -209,7 +209,9 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 	}
 
 	//finally, send it off to the server
+	StatStartSending()
 	err = SendEvent(globals, event)
+	StatStopSending()
 	if err != nil {
 		panic(err) //TODO handle sensibly
 	}

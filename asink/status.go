@@ -13,6 +13,7 @@ var localUpdates int32 = 0
 var remoteUpdates int32 = 0
 var fileUploads int32 = 0
 var fileDownloads int32 = 0
+var sendingUpdates int32 = 0
 
 func GetStats() string {
 	local := atomic.LoadInt32(&localUpdates)
@@ -23,7 +24,8 @@ func GetStats() string {
 	return fmt.Sprintf(`Asink client statistics:
 	Processing %d file updates (%d local, %d remote)
 	Uploading %d files
-	Downloading %d files`, local + remote, local, remote, uploads, downloads)
+	Downloading %d files
+	Sending %d updates`, local+remote, local, remote, uploads, downloads, sendingUpdates)
 }
 
 func StatStartLocalUpdate() {
@@ -49,4 +51,10 @@ func StatStartDownload() {
 }
 func StatStopDownload() {
 	atomic.AddInt32(&fileDownloads, -1)
+}
+func StatStartSending() {
+	atomic.AddInt32(&sendingUpdates, 1)
+}
+func StatStopSending() {
+	atomic.AddInt32(&sendingUpdates, -1)
 }
