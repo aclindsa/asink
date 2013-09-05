@@ -1,6 +1,7 @@
 package main
 
 import (
+	"asink"
 	"fmt"
 	"os"
 )
@@ -37,6 +38,11 @@ var commands []Command = []Command{
 		fn:          UserMod,
 		explanation: "Modify a user",
 	},
+	Command{
+		cmd:         "version",
+		fn:          PrintVersion,
+		explanation: "Display the current version",
+	},
 }
 
 func main() {
@@ -55,4 +61,8 @@ func main() {
 	for _, c := range commands {
 		fmt.Printf("\t%s\t\t%s\n", c.cmd, c.explanation)
 	}
+}
+
+func PrintVersion(args []string) {
+	fmt.Println("Asink server version " + asink.VERSION_STRING + ", using version " + asink.API_VERSION_STRING + " of the Asink API.")
 }
