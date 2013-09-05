@@ -11,19 +11,24 @@ import (
 	"net/rpc"
 )
 
-type ClientStopper int
+type ClientAdmin int
 
-func (c *ClientStopper) StopClient(code *int, result *int) error {
+func (c *ClientAdmin) StopClient(code *int, result *int) error {
 	asink.Exit(*code)
 	*result = 0
+	return nil
+}
+
+func (c *ClientAdmin) GetClientStatus(code *int, result *string) error {
+	*result = GetStats()
 	return nil
 }
 
 func StartRPC(sock string, tornDown chan int) {
 	defer func() { tornDown <- 0 }() //the main thread waits for this to ensure the socket is closed
 
-	clientstop := new(ClientStopper)
-	rpc.Register(clientstop)
+	clientadmin := new(ClientAdmin)
+	rpc.Register(clientadmin)
 
 	rpc.HandleHTTP()
 	l, err := net.Listen("unix", sock)

@@ -28,16 +28,15 @@ var commands []Command = []Command{
 		explanation: "Stop the client daemon",
 	},
 	Command{
+		cmd:         "status",
+		fn:          GetStatus,
+		explanation: "Get a summary of the client's status",
+	},
+	Command{
 		cmd:         "version",
 		fn:          PrintVersion,
 		explanation: "Display the current version",
 	},
-	/*	Command{
-			cmd:         "status",
-			fn:          GetStatus,
-			explanation: "Get a summary of the client's status",
-		},
-	*/
 }
 
 func main() {

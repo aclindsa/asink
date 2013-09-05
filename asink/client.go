@@ -8,6 +8,7 @@ import (
 	"asink"
 	"asink/util"
 	"code.google.com/p/goconf/conf"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -124,6 +125,9 @@ func StartClient(args []string) {
 }
 
 func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
+	StatStartLocalUpdate()
+	defer StatStopLocalUpdate()
+
 	//make the path relative before we save/send it anywhere
 	var err error
 	absolutePath := event.Path
@@ -190,7 +194,9 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		}
 
 		//upload file to remote storage
+		StatStartUpload()
 		err = globals.storage.Put(cachedFilename, event.Hash)
+		StatStopUpload()
 		if err != nil {
 			panic(err)
 		}
@@ -217,6 +223,8 @@ func ProcessLocalEvents(globals AsinkGlobals, eventChan chan *asink.Event) {
 }
 
 func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
+	StatStartRemoteUpdate()
+	defer StatStopRemoteUpdate()
 	latestLocal := LockPath(event.Path, true)
 	defer UnlockPath(event)
 
@@ -248,7 +256,9 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 			}
 			tmpfilename := outfile.Name()
 			outfile.Close()
+			StatStartDownload()
 			err = globals.storage.Get(tmpfilename, event.Hash)
+			StatStopDownload()
 			if err != nil {
 				panic(err) //TODO handle sensibly
 			}
@@ -307,7 +317,7 @@ func ProcessRemoteEvents(globals AsinkGlobals, eventChan chan *asink.Event) {
 	}
 }
 
-func StopClient(args []string) {
+func getSocketFromArgs(args []string) (string, error) {
 	const config_usage = "Config File to use"
 	userHomeDir := "~"
 
@@ -323,20 +333,46 @@ func StopClient(args []string) {
 
 	config, err := conf.ReadConfigFile(globals.configFileName)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Error reading config file at ", globals.configFileName, ". Does it exist?")
-		return
+		return "", err
 	}
 
-	rpcSock, err := config.GetString("local", "socket") //TODO make sure this exists
+	rpcSock, err := config.GetString("local", "socket")
 	if err != nil {
-		fmt.Println("Error reading local.socket from config file at ", globals.configFileName)
+		return "", errors.New("Error reading local.socket from config file at " + globals.configFileName)
+	}
+
+	return rpcSock, nil
+}
+
+func StopClient(args []string) {
+	rpcSock, err := getSocketFromArgs(args)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
 	i := 99
 	returnCode := 0
-	err = asink.RPCCall(rpcSock, "ClientStopper.StopClient", &returnCode, &i)
+	err = asink.RPCCall(rpcSock, "ClientAdmin.StopClient", &i, &returnCode)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func GetStatus(args []string) {
+	var status string
+
+	rpcSock, err := getSocketFromArgs(args)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	i := 99
+	err = asink.RPCCall(rpcSock, "ClientAdmin.GetClientStatus", &i, &status)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(status)
 }
