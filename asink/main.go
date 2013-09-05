@@ -1,3 +1,7 @@
+/*
+ Copyright (C) 2013 Aaron Lindsay <aaron@aclindsay.com>
+*/
+
 package main
 
 import (
