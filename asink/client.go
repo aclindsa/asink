@@ -107,6 +107,7 @@ func StartClient(args []string) {
 	go PathLocker(globals.db)
 
 	//spawn goroutines to handle local events
+	go SendEvents(globals)
 	localFileUpdates := make(chan *asink.Event)
 	go StartWatching(globals.syncDir, localFileUpdates)
 
