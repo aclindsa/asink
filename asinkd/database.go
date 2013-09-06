@@ -68,7 +68,7 @@ func GetAndInitDB() (*AsinkDB, error) {
 	return ret, nil
 }
 
-func (adb *AsinkDB) DatabaseAddEvent(u *User, e *asink.Event) (err error) {
+func (adb *AsinkDB) DatabaseAddEvents(u *User, events []*asink.Event) (err error) {
 	adb.lock.Lock()
 	tx, err := adb.db.Begin()
 	if err != nil {
@@ -83,21 +83,23 @@ func (adb *AsinkDB) DatabaseAddEvent(u *User, e *asink.Event) (err error) {
 		adb.lock.Unlock()
 	}()
 
-	result, err := tx.Exec("INSERT INTO events (userid, type, path, hash, predecessor, timestamp, permissions) VALUES (?,?,?,?,?,?,?);", u.Id, e.Type, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions)
-	if err != nil {
-		return err
+	for _, e := range events {
+		result, err := tx.Exec("INSERT INTO events (userid, type, path, hash, predecessor, timestamp, permissions) VALUES (?,?,?,?,?,?,?);", u.Id, e.Type, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+
+		e.Id = id
 	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return err
-	}
+
 	err = tx.Commit()
 	if err != nil {
 		return err
 	}
-
-	e.Id = id
-	e.InDB = true
 	return nil
 }
 

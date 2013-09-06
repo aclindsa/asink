@@ -162,18 +162,13 @@ func putEvents(w http.ResponseWriter, r *http.Request, user *User) {
 		error_message = err.Error()
 		return
 	}
-	for _, event := range events.Events {
-		err = adb.DatabaseAddEvent(user, event)
-		if err != nil {
-			//TODO should probably do this in a way that the caller knows how many of these have failed and doesn't re-try sending ones that succeeded
-			//i.e. add this to the return codes or something
-			//OR put all the DatabaseAddEvent's inside a SQL transaction, and rollback on any failure
-			error_message = err.Error()
-			return
-		}
+	err = adb.DatabaseAddEvents(user, events.Events)
+	if err != nil {
+		error_message = err.Error()
+		return
 	}
 
-	broadcastToPollers(user.Id, events.Events[0]) //TODO support more than one user
+	broadcastToPollers(user.Id, events.Events[0])
 }
 
 func eventHandler(w http.ResponseWriter, r *http.Request) {
