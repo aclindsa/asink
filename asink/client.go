@@ -236,8 +236,11 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 
 	//if we already have this event, or if it is older than our most recent event, bail out
 	if latestLocal != nil {
-		if event.Timestamp < latestLocal.Timestamp || event.IsSameEvent(latestLocal) {
+		if event.Timestamp < latestLocal.Timestamp {
 			event.LocalStatus |= asink.DISCARDED
+			return
+		}
+		if event.IsSameEvent(latestLocal) {
 			return
 		}
 
