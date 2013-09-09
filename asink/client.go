@@ -141,6 +141,12 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 	defer UnlockPath(event)
 	if latestLocal != nil {
 		event.Predecessor = latestLocal.Hash
+
+		if event.Timestamp < latestLocal.Timestamp {
+			fmt.Printf("trying to send event older than latestLocal:\n")
+			fmt.Printf("OLD %+v\n", latestLocal)
+			fmt.Printf("NEW %+v\n", event)
+		}
 	}
 
 	if event.IsUpdate() {

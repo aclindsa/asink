@@ -29,7 +29,7 @@ func StartWatching(watchDir string, fileUpdates chan *asink.Event) {
 			event := new(asink.Event)
 			event.Path = path
 			event.Type = asink.UPDATE
-			event.Timestamp = info.ModTime().UnixNano()
+			event.Timestamp = time.Now().UnixNano()
 			fileUpdates <- event
 		}
 		return nil
