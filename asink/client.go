@@ -182,30 +182,33 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 		}
 		event.Hash = hash
 
-		//If the file didn't actually change, squash this event
+		//If the hash is the same, don't try to upload the event again
 		if latestLocal != nil && event.Hash == latestLocal.Hash {
 			os.Remove(tmpfilename)
-			event.LocalStatus |= asink.DISCARDED
-			return
-		}
+			//If neither the file contents nor permissions changed, squash this event completely
+			if event.Permissions == latestLocal.Permissions {
+				event.LocalStatus |= asink.DISCARDED
+				return
+			}
+		} else {
+			//rename to local cache w/ filename=hash
+			cachedFilename := path.Join(globals.cacheDir, event.Hash)
+			err = os.Rename(tmpfilename, cachedFilename)
+			if err != nil {
+				err := os.Remove(tmpfilename)
+				if err != nil {
+					panic(err)
+				}
+				panic(err)
+			}
 
-		//rename to local cache w/ filename=hash
-		cachedFilename := path.Join(globals.cacheDir, event.Hash)
-		err = os.Rename(tmpfilename, cachedFilename)
-		if err != nil {
-			err := os.Remove(tmpfilename)
+			//upload file to remote storage
+			StatStartUpload()
+			err = globals.storage.Put(cachedFilename, event.Hash)
+			StatStopUpload()
 			if err != nil {
 				panic(err)
 			}
-			panic(err)
-		}
-
-		//upload file to remote storage
-		StatStartUpload()
-		err = globals.storage.Put(cachedFilename, event.Hash)
-		StatStopUpload()
-		if err != nil {
-			panic(err)
 		}
 	} else {
 		//if we're trying to delete a file that we thought was already deleted, there's no need to delete it again
@@ -307,7 +310,7 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 				panic(err)
 			}
 		}
-		if latestLocal == nil || event.Permissions != latestLocal.Permissions {
+		if latestLocal == nil || event.Hash != latestLocal.Hash || event.Permissions != latestLocal.Permissions {
 			err := os.Chmod(absolutePath, event.Permissions)
 			if err != nil && !util.ErrorFileNotFound(err) {
 				panic(err)
