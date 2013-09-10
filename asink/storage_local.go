@@ -9,6 +9,7 @@ import (
 	"code.google.com/p/goconf/conf"
 	"errors"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 )
@@ -41,37 +42,44 @@ func NewLocalStorage(config *conf.ConfigFile) (*LocalStorage, error) {
 	return ls, nil
 }
 
-func (ls *LocalStorage) Put(filename string, hash string) (e error) {
-	tmpfile, err := util.CopyToTmp(filename, ls.tmpSubdir)
-	if err != nil {
-		return err
-	}
+type putWriteCloser struct {
+	outfile  *os.File
+	filename string
+}
 
-	err = os.Rename(tmpfile, path.Join(ls.storageDir, hash))
+func (wc putWriteCloser) Write(p []byte) (n int, err error) {
+	return wc.outfile.Write(p)
+}
+
+func (wc putWriteCloser) Close() error {
+	tmpfilename := wc.outfile.Name()
+	wc.outfile.Close()
+
+	err := os.Rename(tmpfilename, wc.filename)
 	if err != nil {
-		err := os.Remove(tmpfile)
+		err := os.Remove(tmpfilename)
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-func (ls *LocalStorage) Get(filename string, hash string) error {
-	infile, err := os.Open(path.Join(ls.storageDir, hash))
+func (ls *LocalStorage) Put(hash string) (w io.WriteCloser, e error) {
+	outfile, err := ioutil.TempFile(ls.tmpSubdir, "asink")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer infile.Close()
 
-	outfile, err := os.Create(filename)
+	w = putWriteCloser{outfile, path.Join(ls.storageDir, hash)}
+
+	return
+}
+
+func (ls *LocalStorage) Get(hash string) (r io.ReadCloser, e error) {
+	r, err := os.Open(path.Join(ls.storageDir, hash))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer outfile.Close()
-
-	_, err = io.Copy(outfile, infile)
-
-	return err
+	return
 }

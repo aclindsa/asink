@@ -7,11 +7,14 @@ package main
 import (
 	"code.google.com/p/goconf/conf"
 	"errors"
+	"io"
 )
 
 type Storage interface {
-	Put(filename string, hash string) error
-	Get(filename string, hash string) error
+	// Close() MUST be called on the returned io.WriteCloser
+	Put(hash string) (io.WriteCloser, error)
+	// Close() MUST be called on the returned io.ReadCloser
+	Get(hash string) (io.ReadCloser, error)
 }
 
 func GetStorage(config *conf.ConfigFile) (Storage, error) {

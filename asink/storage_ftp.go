@@ -9,7 +9,6 @@ import (
 	"errors"
 	"github.com/jlaffaye/goftp"
 	"io"
-	"os"
 	"strconv"
 )
 
@@ -58,68 +57,70 @@ func NewFTPStorage(config *conf.ConfigFile) (*FTPStorage, error) {
 	return fs, nil
 }
 
-func (fs *FTPStorage) Put(filename string, hash string) (e error) {
+func (fs *FTPStorage) Put(hash string) (w io.WriteCloser, e error) {
+	returningNormally := false
 	//make sure we don't flood the FTP server
 	fs.connectionsChan <- 0
-	defer func() { <-fs.connectionsChan }()
-
-	infile, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer infile.Close()
+	defer func() {
+		if !returningNormally {
+			<-fs.connectionsChan
+		}
+	}()
 
 	connection, err := ftp.Connect(fs.server + ":" + strconv.Itoa(fs.port))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer connection.Quit()
+	defer func() {
+		if !returningNormally {
+			connection.Quit()
+		}
+	}()
 
 	err = connection.Login(fs.username, fs.password)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = connection.ChangeDir(fs.directory)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return connection.Stor(hash, infile)
+	reader, writer := io.Pipe()
+
+	go func() {
+		err := connection.Stor(hash, reader)
+		if err != nil {
+			reader.CloseWithError(err)
+		}
+		<-fs.connectionsChan
+		connection.Quit()
+	}()
+
+	returningNormally = true
+	return writer, nil
 }
 
-func (fs *FTPStorage) Get(filename string, hash string) error {
+func (fs *FTPStorage) Get(hash string) (io.ReadCloser, error) {
 	fs.connectionsChan <- 0
 	defer func() { <-fs.connectionsChan }()
 
 	connection, err := ftp.Connect(fs.server + ":" + strconv.Itoa(fs.port))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer connection.Quit()
 
 	err = connection.Login(fs.username, fs.password)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = connection.ChangeDir(fs.directory)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	downloadedFile, err := connection.Retr(hash)
-	if err != nil {
-		return err
-	}
-	defer downloadedFile.Close()
-
-	outfile, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer outfile.Close()
-
-	_, err = io.Copy(outfile, downloadedFile)
-	return err
+	return connection.Retr(hash)
 }

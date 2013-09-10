@@ -46,6 +46,21 @@ func RecursiveRemoveEmptyDirs(dir string) {
 	}
 }
 
+func CopyReaderToTmp(src io.Reader, tmpdir string) (string, error) {
+	outfile, err := ioutil.TempFile(tmpdir, "asink")
+	if err != nil {
+		return "", err
+	}
+	defer outfile.Close()
+
+	_, err = io.Copy(outfile, src)
+	if err != nil {
+		return "", err
+	}
+
+	return outfile.Name(), nil
+}
+
 func CopyToTmp(src string, tmpdir string) (string, error) {
 	infile, err := os.Open(src)
 	if err != nil {
@@ -53,18 +68,7 @@ func CopyToTmp(src string, tmpdir string) (string, error) {
 	}
 	defer infile.Close()
 
-	outfile, err := ioutil.TempFile(tmpdir, "asink")
-	if err != nil {
-		return "", err
-	}
-	defer outfile.Close()
-
-	_, err = io.Copy(outfile, infile)
-	if err != nil {
-		return "", err
-	}
-
-	return outfile.Name(), nil
+	return CopyReaderToTmp(infile, tmpdir)
 }
 
 func ErrorFileNotFound(err error) bool {

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -204,7 +205,19 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 
 			//upload file to remote storage
 			StatStartUpload()
-			err = globals.storage.Put(cachedFilename, event.Hash)
+			uploadWriteCloser, err := globals.storage.Put(event.Hash)
+			if err != nil {
+				panic(err)
+			}
+			defer uploadWriteCloser.Close()
+
+			uploadFile, err := os.Open(cachedFilename)
+			if err != nil {
+				panic(err)
+			}
+			defer uploadFile.Close()
+
+			_, err = io.Copy(uploadWriteCloser, uploadFile)
 			StatStopUpload()
 			if err != nil {
 				panic(err)
@@ -270,9 +283,15 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 				panic(err) //TODO handle sensibly
 			}
 			tmpfilename := outfile.Name()
-			outfile.Close()
 			StatStartDownload()
-			err = globals.storage.Get(tmpfilename, event.Hash)
+			downloadReadCloser, err := globals.storage.Get(event.Hash)
+			if err != nil {
+				panic(err)
+			}
+			defer downloadReadCloser.Close()
+			_, err = io.Copy(outfile, downloadReadCloser)
+
+			outfile.Close()
 			StatStopDownload()
 			if err != nil {
 				panic(err) //TODO handle sensibly
