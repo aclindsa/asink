@@ -31,6 +31,8 @@ type AsinkGlobals struct {
 	port           int
 	username       string
 	password       string
+	encrypted      bool
+	key            string
 }
 
 var globals AsinkGlobals
@@ -98,6 +100,12 @@ func StartClient(args []string) {
 	globals.port, err = config.GetInt("server", "port")
 	globals.username, err = config.GetString("server", "username")
 	globals.password, err = config.GetString("server", "password")
+
+	//TODO check errors on encryption settings
+	globals.encrypted, err = config.GetBool("encryption", "enabled")
+	if globals.encrypted {
+		globals.key, err = config.GetString("encryption", "key")
+	}
 
 	globals.db, err = GetAndInitDB(config)
 	if err != nil {
@@ -209,15 +217,28 @@ func ProcessLocalEvent(globals AsinkGlobals, event *asink.Event) {
 			if err != nil {
 				panic(err)
 			}
-			defer uploadWriteCloser.Close()
 
 			uploadFile, err := os.Open(cachedFilename)
 			if err != nil {
+				uploadWriteCloser.Close()
 				panic(err)
 			}
-			defer uploadFile.Close()
 
-			_, err = io.Copy(uploadWriteCloser, uploadFile)
+			if globals.encrypted {
+				encrypter, err := NewEncrypter(uploadWriteCloser, globals.key)
+				if err != nil {
+					uploadWriteCloser.Close()
+					uploadFile.Close()
+					panic(err)
+				}
+				_, err = io.Copy(encrypter, uploadFile)
+				encrypter.Close()
+			} else {
+				_, err = io.Copy(uploadWriteCloser, uploadFile)
+			}
+			uploadFile.Close()
+			uploadWriteCloser.Close()
+
 			StatStopUpload()
 			if err != nil {
 				panic(err)
@@ -289,7 +310,15 @@ func ProcessRemoteEvent(globals AsinkGlobals, event *asink.Event) {
 				panic(err)
 			}
 			defer downloadReadCloser.Close()
-			_, err = io.Copy(outfile, downloadReadCloser)
+			if globals.encrypted {
+				decrypter, err := NewDecrypter(downloadReadCloser, globals.key)
+				if err != nil {
+					panic(err)
+				}
+				_, err = io.Copy(outfile, decrypter)
+			} else {
+				_, err = io.Copy(outfile, downloadReadCloser)
+			}
 
 			outfile.Close()
 			StatStopDownload()
