@@ -110,12 +110,14 @@ dir = /home/user1/.asink/localstorage
 # 'yes' if encryption is enabled and 'no' otherwise
 enabled = yes
 
-# The key only needs to be supplied if encryption is enabled. This
-# currently cannot be changed once you begin synchronizing files, so
-# choose it carefully. In the future, there will most likely be an
-# option to change the encryption key, but it will involve downloading,
-# decrypting, re-encrypting, and re-uploading all the versions of all
-# your files, so it will be a time-intensive operation.
+# The key only needs to be supplied if encryption is enabled. This key
+# must match the key supplied in the config file of every other Asink
+# client you wish to sync with this one. The key currently cannot be
+# changed once you begin synchronizing files, so choose it carefully. In
+# the future, there will most likely be an option to change the
+# encryption key, but it will involve downloading, decrypting,
+# re-encrypting, and re-uploading all the versions of all your files, so
+# it will be a time-intensive operation.
 #
 # Note: The key should not be surrounded by quotes
 key = user1encryptionkey

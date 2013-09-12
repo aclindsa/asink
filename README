@@ -1,0 +1,71 @@
+README for Asink Project
+Copyright (C) 2013 Aaron Lindsay <aaron@aclindsay.com>
+
+
+Purpose
+=======
+
+Asink seeks to be a file synchronization system which doesn't force users to
+choose between open-source and convenience. It also seeks to maintain a high
+level of security and privacy, and therefore optionally encrypts all files
+client-side.  It is written in Go and contains both a client and server, so
+users are free (and, at this point, expected) to host their own servers.
+
+
+Disclaimer
+==========
+
+As this point, Asink is in its very early stages, and should not be trusted.
+While I sincerely appreciate anyone who is willing to help me beta test it, I
+cannot be responsible for any lost or corrupted files. Please, please, PLEASE,
+keep appropriate non-Asink backups of all your files.
+
+It is also quite possible that there are security/privacy-related bugs, so I
+urge you not to solely rely upon Asink to keep prying eyes away from your files
+(at least until a later release).
+
+
+Installation
+============
+
+Please see the INSTALL document included with this repository for installation
+instructions.
+
+
+Server Usage
+============
+
+At this point, starting the server is simple -- just run `asinkd start'. This
+will create a SQLite database in the current directory, use a socket at
+/var/run/asink/asinkd.sock for communication, and serve content on port 8080.
+The database configuration is not currently configurable (this is to come in a
+future version), but the socket and port are configurable on the commandline.
+
+Once it is running, you may use other `asinkd' commands to interact with the
+Asink server. For instance, you may use `asinkd useradd user1' to add a user
+named user1 to the server and create their password (this is necessary for a
+user to use the server).
+
+Each level of commands documents its usage if you add `-h'. For example,
+`asinkd -h' will display the available commands, while `asinkd useradd -h' will
+display the available options for that individual command.
+
+
+Client Usage
+============
+
+If you have installed and configured the client for your machine, using the
+client is as easy as running `asink start' (though you will have to add `-c
+/path/to/config/file' if your configuration file is in a nonstandard location).
+
+If you have not yet configured your client, please see the INSTALL file in the
+same directory as this README file.
+
+Similarly to the server, adding `-h' to the `asink' command or any of its
+subcommands will display the help information for that command.
+
+At this point in its development, the most notable `asink' subcommand is
+`status', which will enable you to see quick statistics about what the Asink
+client is doing. At the moment, these statistics are rather rough, but if
+you're interested in knowing when all your files are done synchronizing `asink
+status' will do the trick.

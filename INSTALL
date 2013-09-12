@@ -1,0 +1,37 @@
+INSTALL for Asink Project
+Copyright (C) 2013 Aaron Lindsay <aaron@aclindsay.com>
+
+
+Building and Installing
+=======================
+
+Arch Linux
+----------
+
+If you use Arch Linux, a package exists to install Asink:
+https://aur.archlinux.org/packages/go-asink-git/
+
+
+Other Distributions
+-------------------
+
+I have not had the time to create packages for other distributions, so you will
+have to download the source and compile it using the Go command-line tools:
+http://golang.org/cmd/go/
+
+
+Configuration
+=============
+
+The server essentially has no configuration. This will change somewhat once the
+server matures and gains non-SQLite database options, etc.
+
+To configure a client, you must create an Asink client config file. The `asink'
+command searches for this file at ~/.asink/config, so it is advised that you
+create the .asink directory and copy the example configuration file under it
+(renaming it to exactly 'config').  The example config file should be called
+example_config in the root directory of the git repository, or possibly at
+/etc/asink/example_config.
+
+The example configuration file is fairly well commented to help you configure
+your clients.
