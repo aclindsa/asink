@@ -1,0 +1,121 @@
+# Copyright (C) 2013 Aaron Lindsay <aaron@aclindsay.com>
+#
+# An example Asink configuration file. The `asink' command will search
+# for this file at ~/.asink/config. If you want to keep it somewhere
+# else, you must run the `asink' command with the `-c' option:
+#     asink -c /path/to/your/config
+#
+# This file must remain only readable and writable only by the user
+# running the Asink client (i.e. `chmod 600 config`) because it contains
+# passwords and encryption keys.
+
+
+########################################################################
+# The [local] section controls things which are independent of the rest
+# of the system (i.e. you can change these settings and not have to
+# change anything with your server configuration, or the config on any
+# of the other clients)
+########################################################################
+[local]
+
+# The directory you want to keep synchronized between your computers
+syncdir = /home/user1/Asink
+
+## The following directories/files are all typically located inside a
+## .asink folder in your home directory.
+
+# A directory to store locally-cached versions of files.
+cachedir = /home/user1/.asink/cache
+
+# A temporary directory used by Asink when it needs to make temporary
+# files
+tmpdir = /home/user1/.asink/cache/.tmpdir
+
+# Where you want to store the SQLite database used by the Asink client
+dblocation = /home/user1/.asink/localdb.db
+
+# The socket to be used to communicate with the Asink client
+socket = /home/user1/.asink/asink.sock
+
+########################################################################
+# The [server] section controls how the Asink client communicates with
+# the Asink server (`asinkd')
+########################################################################
+[server]
+
+# The IP address or hostname of your Asink server (`asinkd')
+host = example.com
+
+# The port used to communicate with asinkd (i.e. 'asinkd -p 8080')
+port = 8080
+
+# Your user's username and password for communicating with the server
+# These can be set using the asinkd 'useradd', 'usermod', and 'userdel'
+# commands.
+username = user1
+# Don't surround with quotes unless your password contains them
+password = user1password
+
+########################################################################
+# The [storage] section controls how/where your files are stored (The
+# server mentioned above only handles keeping track of file versions, it
+# doesn't actually store them). Asink supports several different types
+# of storage providers, and which options are available to you in this
+# section varies depending on which storage provider you use.
+#
+# The current storage options are:
+#  local
+#  FTP
+#
+# Be sure you only uncomment one of the following "method = ..." lines
+# along with its corresponding options.
+########################################################################
+[storage]
+
+
+## Local storage ##
+# Local storage is useful if you want to back your files up to a NFS
+# share or something you can mount locally (and also for testing Asink
+# with only one machine).
+method = local
+
+# The directory to store files in
+dir = /home/user1/.asink/localstorage
+
+
+## FTP storage ##
+#method = ftp
+
+# The hostname or IP address of the FTP server
+#server = localhost
+
+# The remote port the FTP server is using
+# port = 21
+
+# The directory on the server you want to store your files in
+#directory = asink_ftp
+
+# The username and password used to connect to the FTP server
+#username = user1
+# Don't surround with quotes unless your password contains them
+#password = user1password
+
+
+########################################################################
+# The [encryption] section controls whether or not files are encrypted,
+# and supplies the encryption key if they are.
+########################################################################
+[encryption]
+
+# 'yes' if encryption is enabled and 'no' otherwise
+enabled = yes
+
+# The key only needs to be supplied if encryption is enabled. This
+# currently cannot be changed once you begin synchronizing files, so
+# choose it carefully. In the future, there will most likely be an
+# option to change the encryption key, but it will involve downloading,
+# decrypting, re-encrypting, and re-uploading all the versions of all
+# your files, so it will be a time-intensive operation.
+#
+# Note: The key should not be surrounded by quotes
+key = user1encryptionkey
