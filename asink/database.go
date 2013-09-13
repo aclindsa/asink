@@ -106,7 +106,7 @@ func (adb *AsinkDB) DatabaseUpdateEvent(e *asink.Event) (err error) {
 		adb.lock.Unlock()
 	}()
 
-	result, err := tx.Exec("UPDATE events SET id=?, type=?, localstatus=?, path=?, hash=?, prececessor=?, timestamp=?, permissions=? WHERE localid=?;", e.Id, e.Type, e.LocalStatus, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions, e.LocalId)
+	result, err := tx.Exec("UPDATE events SET id=?, type=?, localstatus=?, path=?, hash=?, predecessor=?, timestamp=?, permissions=? WHERE localid == ?;", e.Id, e.Type, e.LocalStatus, e.Path, e.Hash, e.Predecessor, e.Timestamp, e.Permissions, e.LocalId)
 	if err != nil {
 		return err
 	}
