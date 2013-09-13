@@ -44,6 +44,15 @@ func PathLocker(db *AsinkDB) {
 							panic(err)
 						}
 						//TODO batch database writes instead of doing one at a time
+					} else if v.latestEvent.Id == 0 {
+						//can only get here if latestEvent exists and is the same for 'event'
+						//except for Id, so update latestEvent's Id in the database.
+						v.latestEvent.Id = event.Id
+						event = v.latestEvent
+						err := db.DatabaseUpdateEvent(event)
+						if err != nil {
+							panic(err)
+						}
 					}
 					v.latestEvent = event
 				}
