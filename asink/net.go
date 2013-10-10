@@ -82,9 +82,11 @@ func actuallySendEvents(globals AsinkGlobals, events []*asink.Event) error {
 		return err
 	}
 	if apistatus.Status != asink.SUCCESS {
+		StatOffline()
 		return errors.New("API response was not success: " + apistatus.Explanation)
 	}
 
+	StatOnline()
 	return nil
 }
 
@@ -131,8 +133,10 @@ func SendEvent(globals AsinkGlobals, event *asink.Event) error {
 func GetEvents(globals AsinkGlobals, events chan *asink.Event) {
 	url := "http://" + globals.server + ":" + strconv.Itoa(int(globals.port)) + "/events/"
 	var successiveErrors uint = 0
+	StatOnline()
 
 	errorWait := func(err error) {
+		StatOffline()
 		fmt.Println(err)
 		var waitMilliseconds time.Duration = MIN_ERROR_WAIT << successiveErrors
 		if waitMilliseconds > MAX_ERROR_WAIT {
@@ -192,6 +196,8 @@ func GetEvents(globals AsinkGlobals, events chan *asink.Event) {
 			events <- event
 			latestEvent = event
 		}
+
+		StatOnline()
 		successiveErrors = 0
 	}
 }
