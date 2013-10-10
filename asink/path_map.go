@@ -37,7 +37,7 @@ func PathLocker(db *AsinkDB) {
 		case event = <-pathUnlockerChan:
 			if v, ok = m[event.Path]; ok != false {
 				//only update status in data structures if the event hasn't been discarded
-				if event.LocalStatus&asink.DISCARDED == 0 {
+				if event.LocalStatus&asink.DISCARDED == 0 && event.LocalStatus&asink.NOSAVE == 0 {
 					if v.latestEvent == nil || !v.latestEvent.IsSameEvent(event) {
 						err := db.DatabaseAddEvent(event)
 						if err != nil {
