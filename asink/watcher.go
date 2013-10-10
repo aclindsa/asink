@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func StartWatching(watchDir string, fileUpdates chan *asink.Event) {
+func StartWatching(watchDir string, fileUpdates chan *asink.Event, initialWalkComplete chan int) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic("Failed to create fsnotify watcher")
@@ -48,8 +48,8 @@ func StartWatching(watchDir string, fileUpdates chan *asink.Event) {
 						if err != nil {
 							panic("Failed to watch " + ev.Name)
 						}
+						//scan this directory to ensure any file events we missed before starting to watch this directory are caught
 						filepath.Walk(ev.Name, watchDirFn)
-						//TODO do a scan of this directory so we ensure any file events we missed before starting to watch this directory are caught
 					}
 					continue
 				}
@@ -76,4 +76,5 @@ func StartWatching(watchDir string, fileUpdates chan *asink.Event) {
 
 	//start watching the directory passed in
 	filepath.Walk(watchDir, watchDirFn)
+	initialWalkComplete <- 0
 }

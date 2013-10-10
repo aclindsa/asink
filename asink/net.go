@@ -51,7 +51,7 @@ func AuthenticatedPost(url, bodyType string, body io.Reader, username, password 
 	return AuthenticatedRequest("POST", url, bodyType, body, username, password)
 }
 
-func actuallySendEvents(globals AsinkGlobals, events []*asink.Event) error {
+func actuallySendEvents(globals *AsinkGlobals, events []*asink.Event) error {
 	url := "http://" + globals.server + ":" + strconv.Itoa(int(globals.port)) + "/events/"
 
 	//construct json payload
@@ -90,7 +90,7 @@ func actuallySendEvents(globals AsinkGlobals, events []*asink.Event) error {
 	return nil
 }
 
-func SendEvents(globals AsinkGlobals) {
+func SendEvents(globals *AsinkGlobals) {
 	for {
 		//make arrays to hold events and return channels
 		events := make([]*asink.Event, 1)
@@ -123,14 +123,14 @@ func SendEvents(globals AsinkGlobals) {
 	}
 }
 
-func SendEvent(globals AsinkGlobals, event *asink.Event) error {
+func SendEvent(globals *AsinkGlobals, event *asink.Event) error {
 	responseChan := make(chan error)
 	request := sendEventRequest{event, &responseChan}
 	sendEventsChan <- &request
 	return <-responseChan
 }
 
-func GetEvents(globals AsinkGlobals, events chan *asink.Event) {
+func GetEvents(globals *AsinkGlobals, events chan *asink.Event) {
 	url := "http://" + globals.server + ":" + strconv.Itoa(int(globals.port)) + "/events/"
 	var successiveErrors uint = 0
 	StatOnline()
