@@ -48,3 +48,11 @@ func WaitOnExit() int {
 	atomic.AddInt32(&exitWaiterCount, 1)
 	return <-exitWaiterChan
 }
+
+func exitChanWaiter(waiterChan chan int) {
+	waiterChan <- <- exitWaiterChan
+}
+func WaitOnExitChan(waiterChan chan int) {
+	atomic.AddInt32(&exitWaiterCount, 1)
+	go exitChanWaiter(waiterChan)
+}
