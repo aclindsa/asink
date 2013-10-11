@@ -22,7 +22,7 @@ type EventStatus uint32
 const (
 	//Local event status flags
 	DISCARDED = EventStatus(1) << iota //event is to be discarded because it errored or is duplicate
-	NOSAVE //event should not be saved (only current reason is because its in the top half of local processing)
+	NOSAVE                             //event should not be saved (only current reason is because its in the top half of local processing)
 )
 
 type Event struct {

@@ -50,7 +50,7 @@ func WaitOnExit() int {
 }
 
 func exitChanWaiter(waiterChan chan int) {
-	waiterChan <- <- exitWaiterChan
+	waiterChan <- <-exitWaiterChan
 }
 func WaitOnExitChan(waiterChan chan int) {
 	atomic.AddInt32(&exitWaiterCount, 1)
