@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 )
 
 //Event-processing errors
@@ -62,6 +63,30 @@ func ErrorRequiresExit(err error) bool {
 		return true
 	}
 	return true //if the error wasn't even a processing error, something went wrong, so we should definitely exit
+}
+
+//handle a conflict by copying the loser event to another file
+func handleConflict(globals *AsinkGlobals, loser *asink.Event, copyFrom string) error {
+	if loser.IsUpdate() {
+		//come up with new file name
+		conflictedPath := path.Join(globals.syncDir, loser.Path) + "_conflicted_copy_" + time.Now().Format("2006-01-02_15:04:05.000000")
+
+		//copy file to new filename
+		src, err := os.Open(copyFrom)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+		sink, err := os.Create(conflictedPath)
+		if err != nil {
+			return err
+		}
+		defer sink.Close()
+
+		_, err = io.Copy(sink, src)
+		return err
+	}
+	return nil
 }
 
 func ProcessLocalEvent_Upper(globals *AsinkGlobals, event *asink.Event) error {
@@ -193,10 +218,12 @@ func ProcessLocalEvent_Lower(globals *AsinkGlobals, event *asink.Event) error {
 		//this local event. If this is true, we have a conflict we
 		//can't resolve without user intervention.
 		if latestLocal.Hash != event.Predecessor {
-			fmt.Printf("local conflict:\n")
-			fmt.Printf("OLD %+v\n", latestLocal)
-			fmt.Printf("NEW %+v\n", event)
-			//TODO handle conflict?
+			err = handleConflict(globals, event, path.Join(globals.cacheDir, event.Hash))
+			event.LocalStatus |= asink.DISCARDED
+			if err != nil {
+				return ProcessingError{PERMANENT, err}
+			}
+			return nil
 		}
 	}
 
@@ -273,10 +300,10 @@ func ProcessRemoteEvent(globals *AsinkGlobals, event *asink.Event) error {
 		}
 
 		if latestLocal.Hash != event.Predecessor && latestLocal.Hash != event.Hash {
-			fmt.Printf("remote conflict:\n")
-			fmt.Printf("OLD %+v\n", latestLocal)
-			fmt.Printf("NEW %+v\n", event)
-			//TODO handle conflict?
+			err = handleConflict(globals, latestLocal, path.Join(globals.cacheDir, latestLocal.Hash))
+			if err != nil {
+				return ProcessingError{PERMANENT, err}
+			}
 		}
 	}
 
