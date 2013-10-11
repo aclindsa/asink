@@ -5,7 +5,7 @@
 package main
 
 import (
-	"asink"
+	"github.com/aclindsa/asink"
 	"github.com/howeyc/fsnotify"
 	"os"
 	"path/filepath"

@@ -5,8 +5,8 @@
 package main
 
 import (
-	"asink"
 	"fmt"
+	"github.com/aclindsa/asink"
 	"os"
 )
 

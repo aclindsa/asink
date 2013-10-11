@@ -5,7 +5,7 @@
 package main
 
 import (
-	"asink"
+	"github.com/aclindsa/asink"
 	"net"
 	"net/http"
 	"net/rpc"

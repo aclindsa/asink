@@ -5,10 +5,10 @@
 package main
 
 import (
-	"asink"
 	"code.google.com/p/goconf/conf"
 	"database/sql"
 	"errors"
+	"github.com/aclindsa/asink"
 	_ "github.com/mattn/go-sqlite3"
 	"strconv"
 	"sync"

@@ -5,7 +5,7 @@
 package main
 
 import (
-	"asink"
+	"github.com/aclindsa/asink"
 	"sync"
 	"time"
 )

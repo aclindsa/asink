@@ -5,12 +5,12 @@
 package main
 
 import (
-	"asink"
-	"asink/util"
 	"code.google.com/p/goconf/conf"
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/aclindsa/asink"
+	"github.com/aclindsa/asink/util"
 	"os/user"
 	"path"
 )

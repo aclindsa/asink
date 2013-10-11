@@ -5,11 +5,11 @@
 package main
 
 import (
-	"asink"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aclindsa/asink"
 	"io"
 	"io/ioutil"
 	"net/http"

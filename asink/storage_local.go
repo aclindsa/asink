@@ -5,9 +5,9 @@
 package main
 
 import (
-	"asink/util"
 	"code.google.com/p/goconf/conf"
 	"errors"
+	"github.com/aclindsa/asink/util"
 	"io"
 	"io/ioutil"
 	"os"

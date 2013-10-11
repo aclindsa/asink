@@ -5,9 +5,9 @@
 package main
 
 import (
-	"asink"
 	"database/sql"
 	"errors"
+	"github.com/aclindsa/asink"
 	_ "github.com/mattn/go-sqlite3"
 	"sync"
 )

@@ -5,9 +5,9 @@
 package main
 
 import (
-	"asink"
-	"asink/util"
 	"fmt"
+	"github.com/aclindsa/asink"
+	"github.com/aclindsa/asink/util"
 	"io"
 	"io/ioutil"
 	"os"

@@ -5,10 +5,10 @@
 package main
 
 import (
-	"asink"
 	"code.google.com/p/gopass"
 	"flag"
 	"fmt"
+	"github.com/aclindsa/asink"
 	"net/rpc"
 	"os"
 	"strconv"
