@@ -24,11 +24,12 @@ First, install the non-Go dependencies however you prefer: sqlite3
 Next, install (well, really just fetch the source to) Asink and its Go
 dependencies:
 
-$ go get -d -u github.com/aclindsa/asink
+$ go get -d -u github.com/aclindsa/asink/asink
+$ go get -d -u github.com/aclindsa/asink/asinkd
 
-Finally, assuming your $GOPATH includes ~/go (see
-http://golang.org/doc/code.html for more information), do the following to
-build the client and server, respectively:
+If you get an error with the above, it is likely that your $GOPATH is
+misconfigured. See http://golang.org/doc/code.html for more information. Do the
+following to build the client and server, respectively:
 
 $ go build -o asink github.com/aclindsa/asink/asink
 $ go build -o asinkd github.com/aclindsa/asink/asinkd
