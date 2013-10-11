@@ -29,31 +29,14 @@ func (nc *NormalContext) Run() error {
 		select {
 		case event := <-nc.localUpdatesChan:
 			//process top half of local event
-			err := ProcessLocalEvent_Upper(nc.globals, event)
+			err := ProcessLocalEvent(nc.globals, event)
 			if err != nil {
 				if e, ok := err.(ProcessingError); !ok || e.ErrorType != TEMPORARY {
 					return err
 				} else {
 					//if error was temporary, retry once
 					event.LocalStatus = 0
-					err := ProcessLocalEvent_Upper(nc.globals, event)
-					if err != nil {
-						return err
-					}
-				}
-			}
-			if event.LocalStatus&asink.DISCARDED != 0 {
-				continue
-			}
-			//process bottom half of local event
-			err = ProcessLocalEvent_Lower(nc.globals, event)
-			if err != nil {
-				if e, ok := err.(ProcessingError); !ok || e.ErrorType != TEMPORARY {
-					return err
-				} else {
-					//if error was temporary, retry once
-					event.LocalStatus = 0
-					err := ProcessLocalEvent_Lower(nc.globals, event)
+					err := ProcessLocalEvent(nc.globals, event)
 					if err != nil {
 						return err
 					}

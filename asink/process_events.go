@@ -88,8 +88,7 @@ func handleConflict(globals *AsinkGlobals, loser *asink.Event, copyFrom string) 
 	}
 	return nil
 }
-
-func ProcessLocalEvent_Upper(globals *AsinkGlobals, event *asink.Event) error {
+func ProcessLocalEvent(globals *AsinkGlobals, event *asink.Event) error {
 	var err error
 
 	StatStartLocalUpdate()
@@ -107,10 +106,50 @@ func ProcessLocalEvent_Upper(globals *AsinkGlobals, event *asink.Event) error {
 		if err != nil {
 			event.LocalStatus |= asink.DISCARDED
 		}
-		event.LocalStatus |= asink.NOSAVE //make sure event doesn't get saved back until lower half
 		UnlockPath(event)
 	}()
 
+	err = processLocalEvent_Upper(globals, event, latestLocal, absolutePath)
+	if err != nil {
+		return err
+	}
+	//don't process the second half if the first half discarded it
+	if event.LocalStatus&asink.DISCARDED != 0 {
+		return nil
+	}
+	err = processLocalEvent_Lower(globals, event, latestLocal)
+	return err
+}
+
+func ProcessLocalEvent_Upper(globals *AsinkGlobals, event *asink.Event) error {
+	var err error
+
+	StatStartLocalUpdate()
+	defer StatStopLocalUpdate()
+
+	//make the path relative before we save/send it anywhere
+	absolutePath := event.Path
+	event.Path, err = filepath.Rel(globals.syncDir, event.Path)
+	if err != nil {
+		return ProcessingError{TEMPORARY, err}
+	}
+
+	latestLocal := LockPath(event.Path, true)
+
+	defer func() {
+		if err != nil {
+			event.LocalStatus |= asink.DISCARDED
+		}
+		event.LocalStatus |= asink.NOSAVE //make sure event doesn't get saved back until lower half
+		UnlockPath(event)
+		event.LocalStatus &= ^asink.NOSAVE
+	}()
+
+	err = processLocalEvent_Upper(globals, event, latestLocal, absolutePath)
+	return err
+}
+
+func processLocalEvent_Upper(globals *AsinkGlobals, event *asink.Event, latestLocal *asink.Event, absolutePath string) error {
 	if latestLocal != nil {
 		event.Predecessor = latestLocal.Hash
 
@@ -195,9 +234,15 @@ func ProcessLocalEvent_Lower(globals *AsinkGlobals, event *asink.Event) error {
 		if err != nil {
 			event.LocalStatus |= asink.DISCARDED
 		}
-		event.LocalStatus &= ^asink.NOSAVE //clear NOSAVE set in upper half
 		UnlockPath(event)
 	}()
+
+	err = processLocalEvent_Lower(globals, event, latestLocal)
+	return err
+}
+
+func processLocalEvent_Lower(globals *AsinkGlobals, event *asink.Event, latestLocal *asink.Event) error {
+	var err error
 
 	//if we already have this event, or if it is older than our most recent event, bail out
 	if latestLocal != nil {
