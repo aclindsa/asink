@@ -8,7 +8,7 @@ Building and Installing
 Arch Linux
 ----------
 
-If you use Arch Linux, a package exists to install Asink:
+If you use Arch Linux, an AUR package exists to install Asink:
 https://aur.archlinux.org/packages/go-asink-git/
 
 
@@ -16,8 +16,36 @@ Other Distributions
 -------------------
 
 I have not had the time to create packages for other distributions, so you will
-have to download the source and compile it using the Go command-line tools:
-http://golang.org/cmd/go/
+have to download the source and compile it using the standard Go command-line
+tools: http://golang.org/cmd/go/.
+
+First, install the non-Go dependencies however you prefer: sqlite3
+
+Next, install (well, really just fetch the source to) the Go dependencies:
+
+$ go get -d code.google.com/p/gopass github.com/mattn/go-sqlite3 \
+  code.google.com/p/goconf/conf code.google.com/p/go.crypto/openpgp \
+  github.com/howeyc/fsnotify github.com/jlaffaye/goftp
+
+Finally, assuming your $GOPATH includes ~/go and you have the Asink source code
+checked out to ~/go/src/github.com/aclindsa/asink/ (see
+http://golang.org/doc/code.html for more information), do the following to
+build the client and server, respectively:
+
+$ go build -o asink github.com/aclindsa/asink/asink
+$ go build -o asinkd github.com/aclindsa/asink/asinkd
+
+You may then install these two binaries however and wherever you wish.
+
+In order to allow socket-based communication with your Asink server, you should
+ensure that the /var/run/asink directory exists, is owned by root:root and has
+755 permissions. On Arch Linux, this is accomplished by creating a file at
+/usr/lib/tmpfiles.d/asink.conf with the following contents (your distro may
+handle this differently):
+
+--- start /usr/lib/tmpfiles.d/asink.conf ---
+D /run/asink 0755 root root
+--- end /usr/lib/tmpfiles.d/asink.conf ---
 
 
 Configuration
