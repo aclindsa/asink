@@ -6,6 +6,8 @@ package main
 
 import (
 	"github.com/aclindsa/asink"
+	"os"
+	"path"
 	"time"
 )
 
@@ -55,6 +57,62 @@ func (sc *StartupContext) Run() error {
 			initialWalkIncomplete = false
 		case <-sc.exitChan:
 			return ProcessingError{EXITED, nil}
+		}
+	}
+
+	//find any files that have been deleted since the last time we ran
+	deletedFiles := []*asink.Event{}
+	resultChan := make(chan *asink.Event)
+	errorChan := make(chan error)
+	go sc.globals.db.DatabaseGetAllFiles(resultChan, errorChan)
+	deletionWalkIncomplete := true
+	for deletionWalkIncomplete {
+		select {
+		case oldEvent := <-resultChan:
+			if oldEvent == nil {
+				deletionWalkIncomplete = false
+				break
+			}
+
+			//if the file still exists, disregard this event
+			absolutePath := path.Join(sc.globals.syncDir, oldEvent.Path)
+			if _, err := os.Stat(absolutePath); err == nil {
+				break
+			}
+
+			event := new(asink.Event)
+			event.Path = absolutePath
+			event.Type = asink.DELETE
+			event.Timestamp = time.Now().UnixNano()
+			deletedFiles = append(deletedFiles, event)
+		case err := <-errorChan:
+			return ProcessingError{PERMANENT, err}
+		}
+	}
+
+	for _, event := range deletedFiles {
+		//make sure we don't need to exit
+		select {
+		case <-sc.exitChan:
+			return ProcessingError{EXITED, nil}
+		default:
+		}
+		//process top half of local event
+		err := ProcessLocalEvent_Upper(sc.globals, event)
+		if err != nil {
+			if e, ok := err.(ProcessingError); !ok || e.ErrorType != TEMPORARY {
+				return err
+			} else {
+				//if error was temporary, retry once
+				event.LocalStatus = 0
+				err := ProcessLocalEvent_Upper(sc.globals, event)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		if event.LocalStatus&asink.DISCARDED == 0 {
+			localEvents = append(localEvents, event)
 		}
 	}
 

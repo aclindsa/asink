@@ -166,3 +166,36 @@ func (adb *AsinkDB) DatabaseLatestRemoteEvent() (event *asink.Event, err error) 
 		return event, nil
 	}
 }
+
+//Sends events down resultsChan for all files currently tracked in the
+//database. nil will be sent to signify there are no more events. If an error
+//occurs, it will be send down errorChan and no more events will be sent.
+func (adb *AsinkDB) DatabaseGetAllFiles(resultChan chan *asink.Event, errorChan chan error) {
+	adb.lock.Lock()
+
+	//This query selects only the files currently tracked and not deleted.
+	//It does so by doing an inner join from the events table onto itself,
+	//and only selecting a row if its timestamp is greater than all others
+	//that share its path AND it is not a deletion event.
+	rows, err := adb.db.Query("SELECT e1.id, e1.localid, e1.type, e1.localstatus, e1.path, e1.hash, e1.predecessor, e1.timestamp, e1.permissions FROM events AS e1 LEFT OUTER JOIN events as e2 ON e1.path = e2.path AND (e1.timestamp < e2.timestamp OR (e1.timestamp = e2.timestamp AND e1.id < e2.id)) WHERE e2.id IS NULL AND e1.type = ?;", asink.UPDATE)
+	if err != nil {
+		errorChan <- err
+		return
+	}
+
+	go func() {
+		for rows.Next() {
+			event := new(asink.Event)
+			err := rows.Scan(&event.Id, &event.LocalId, &event.Type, &event.LocalStatus, &event.Path, &event.Hash, &event.Predecessor, &event.Timestamp, &event.Permissions)
+			if err != nil {
+				adb.lock.Unlock()
+				errorChan <- err
+				return
+			}
+			resultChan <- event
+		}
+
+		adb.lock.Unlock()
+		resultChan <- nil
+	}()
+}
