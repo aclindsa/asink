@@ -142,7 +142,6 @@ func ProcessLocalEvent_Upper(globals *AsinkGlobals, event *asink.Event) error {
 		}
 		event.LocalStatus |= asink.NOSAVE //make sure event doesn't get saved back until lower half
 		UnlockPath(event)
-		event.LocalStatus &= ^asink.NOSAVE
 	}()
 
 	err = processLocalEvent_Upper(globals, event, latestLocal, absolutePath)
@@ -234,6 +233,7 @@ func ProcessLocalEvent_Lower(globals *AsinkGlobals, event *asink.Event) error {
 		if err != nil {
 			event.LocalStatus |= asink.DISCARDED
 		}
+		event.LocalStatus &= ^asink.NOSAVE //clear NOSAVE set in upper half
 		UnlockPath(event)
 	}()
 
