@@ -364,12 +364,14 @@ func ProcessRemoteEvent(globals *AsinkGlobals, event *asink.Event) error {
 			StatStartDownload()
 			downloadReadCloser, err := globals.storage.Get(event.Hash)
 			if err != nil {
+				StatStopDownload()
 				return ProcessingError{STORAGE, err}
 			}
 			defer downloadReadCloser.Close()
 			if globals.encrypted {
 				decrypter, err := NewDecrypter(downloadReadCloser, globals.key)
 				if err != nil {
+					StatStopDownload()
 					return ProcessingError{STORAGE, err}
 				}
 				_, err = io.Copy(outfile, decrypter)
