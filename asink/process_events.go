@@ -323,7 +323,7 @@ func ProcessRemoteEvent(globals *AsinkGlobals, event *asink.Event) error {
 
 	StatStartRemoteUpdate()
 	defer StatStopRemoteUpdate()
-	latestLocal := LockPath(event.Path, true)
+	latestLocal := LockPath(event.Path, false)
 	defer func() {
 		if err != nil {
 			event.LocalStatus |= asink.DISCARDED
