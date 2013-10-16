@@ -136,12 +136,19 @@ func StartClient(args []string) {
 	//begin running contexts
 	err = startupContext.Run()
 	if err != nil && ErrorRequiresExit(err) {
+		fmt.Println(err)
+		if !ErrorWasExit(err) {
+			asink.Exit(1)
+		}
 		return
 	}
 
 	err = normalContext.Run()
 	if err != nil {
 		fmt.Println(err)
+		if !ErrorWasExit(err) {
+			asink.Exit(1)
+		}
 	}
 }
 

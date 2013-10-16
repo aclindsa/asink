@@ -55,6 +55,15 @@ func (pe ProcessingError) Error() string {
 	return fmt.Sprintf("%s: %s", typeString, origErrorString)
 }
 
+func ErrorWasExit(err error) bool {
+	if e, ok := err.(ProcessingError); ok {
+		if e.ErrorType == EXITED {
+			return true
+		}
+	}
+	return false
+}
+
 func ErrorRequiresExit(err error) bool {
 	if e, ok := err.(ProcessingError); ok {
 		if e.ErrorType == TEMPORARY || e.ErrorType == NETWORK {
