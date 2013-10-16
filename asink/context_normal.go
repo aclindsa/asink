@@ -17,7 +17,6 @@ type NormalContext struct {
 	exitChan          chan int
 	workerError       chan error
 	workerExit        chan int
-	workerExited      chan int
 }
 
 func NewNormalContext(globals *AsinkGlobals, localChan chan *asink.Event, remoteChan chan *asink.Event, exitChan chan int) *NormalContext {
@@ -30,7 +29,6 @@ func NewNormalContext(globals *AsinkGlobals, localChan chan *asink.Event, remote
 }
 
 func (nc *NormalContext) runWorker() {
-	defer func() { nc.workerExited <- 0 }()
 	for {
 		select {
 		case event := <-nc.localUpdatesChan:
@@ -73,7 +71,6 @@ func (nc *NormalContext) runWorker() {
 }
 func (nc *NormalContext) Run() error {
 	nc.workerExit = make(chan int)
-	nc.workerExited = make(chan int)
 	nc.workerError = make(chan error)
 
 	//start all the goroutines
@@ -90,13 +87,12 @@ func (nc *NormalContext) Run() error {
 	}
 
 	//notify all the goroutines we're exiting
-	for i := 0; i < NUM_NORMAL_WORKERS; i++ {
-		nc.workerExit <- 0
-	}
-
-	//wait until they're finished
-	for i := 0; i < NUM_NORMAL_WORKERS; i++ {
-		<-nc.workerExited
+	for i := 0; i < NUM_NORMAL_WORKERS; {
+		select {
+		case nc.workerExit <- 0:
+			i++
+		case <-nc.workerError:
+		}
 	}
 
 	return err
