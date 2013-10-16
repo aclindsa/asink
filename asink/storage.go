@@ -28,16 +28,16 @@ func GetStorage(config *conf.ConfigFile) (Storage, error) {
 	switch storageMethod {
 	case "local":
 		storage, err = NewLocalStorage(config)
-		if err != nil {
-			return nil, err
-		}
 	case "ftp":
 		storage, err = NewFTPStorage(config)
-		if err != nil {
-			return nil, err
-		}
+	case "gdrive":
+		storage, err = NewGDriveStorage(config)
 	default:
 		return nil, errors.New("Error: storage method '" + storageMethod + "' not found.")
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	return storage, nil

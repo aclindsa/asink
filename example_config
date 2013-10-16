@@ -66,6 +66,7 @@ password = user1password
 # The current storage options are:
 #  local
 #  FTP
+#  Google Drive
 #
 # Be sure you only uncomment one of the following "method = ..." lines
 # along with its corresponding options.
@@ -90,7 +91,7 @@ dir = /home/user1/.asink/localstorage
 #server = localhost
 
 # The remote port the FTP server is using
-# port = 21
+#port = 21
 
 # The directory on the server you want to store your files in
 #directory = asink_ftp
@@ -99,6 +100,24 @@ dir = /home/user1/.asink/localstorage
 #username = user1
 # Don't surround with quotes unless your password contains them
 #password = user1password
+
+
+## Google Drive storage ##
+#method = gdrive
+
+# Where to cache your GDrive auth token
+#cachefile = /home/user1/.asink/gdrive_cache.json
+
+# The directory on the server in which you want to store your files (will be
+# created if it doesn't exist).
+#directory = asink
+
+# The user-specific auth code received when you authorize the Asink client to
+# access your GDrive files. If you are initially configuring Asink, un-comment
+# this but leave it blank. The first time you run the Asink client, you will be
+# instructed to visit a URL to obtain this code. Once you've done this, copy
+# and paste it here and re-start the Asink client.
+#oauth_code = 
 
 
 ########################################################################
