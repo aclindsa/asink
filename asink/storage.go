@@ -11,8 +11,10 @@ import (
 )
 
 type Storage interface {
-	// Close() MUST be called on the returned io.WriteCloser
-	Put(hash string) (io.WriteCloser, error)
+	// Close() MUST be called on the returned io.WriteCloser. When the
+	// upload is complete either nil or an error will be written to the
+	// 'done' channel.
+	Put(hash string, done chan error) (io.WriteCloser, error)
 	// Close() MUST be called on the returned io.ReadCloser
 	Get(hash string) (io.ReadCloser, error)
 }

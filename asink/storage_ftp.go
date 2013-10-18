@@ -57,7 +57,7 @@ func NewFTPStorage(config *conf.ConfigFile) (*FTPStorage, error) {
 	return fs, nil
 }
 
-func (fs *FTPStorage) Put(hash string) (w io.WriteCloser, e error) {
+func (fs *FTPStorage) Put(hash string, done chan error) (w io.WriteCloser, e error) {
 	returningNormally := false
 	//make sure we don't flood the FTP server
 	fs.connectionsChan <- 0
@@ -96,6 +96,7 @@ func (fs *FTPStorage) Put(hash string) (w io.WriteCloser, e error) {
 		}
 		<-fs.connectionsChan
 		connection.Quit()
+		done <- err
 	}()
 
 	returningNormally = true

@@ -108,6 +108,7 @@ func NewGDriveStorage(config *conf.ConfigFile) (*GDriveStorage, error) {
 }
 
 func (gs *GDriveStorage) Put(hash string) (w io.WriteCloser, e error) {
+func (gs *GDriveStorage) Put(hash string, done chan error) (w io.WriteCloser, e error) {
 
 	//TODO detect duplicates and don't re-upload this file if it already exists
 
@@ -122,6 +123,7 @@ func (gs *GDriveStorage) Put(hash string) (w io.WriteCloser, e error) {
 		if err != nil {
 			reader.CloseWithError(err)
 		}
+		done <- err
 	}()
 
 	return writer, nil

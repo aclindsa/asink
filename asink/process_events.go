@@ -284,7 +284,8 @@ func processLocalEvent_Lower(globals *AsinkGlobals, event *asink.Event, latestLo
 	if event.IsUpdate() {
 		//upload file to remote storage
 		StatStartUpload()
-		uploadWriteCloser, err := globals.storage.Put(event.Hash)
+		done := make(chan error, 1)
+		uploadWriteCloser, err := globals.storage.Put(event.Hash, done)
 		if err != nil {
 			return ProcessingError{STORAGE, err}
 		}
@@ -310,6 +311,12 @@ func processLocalEvent_Lower(globals *AsinkGlobals, event *asink.Event, latestLo
 		}
 		uploadFile.Close()
 		uploadWriteCloser.Close()
+
+		//ensure the upload is observable by other clients before proceeding
+		err = <-done
+		if err != nil {
+			return ProcessingError{STORAGE, err}
+		}
 
 		StatStopUpload()
 		if err != nil {

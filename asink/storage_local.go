@@ -45,6 +45,7 @@ func NewLocalStorage(config *conf.ConfigFile) (*LocalStorage, error) {
 type putWriteCloser struct {
 	outfile  *os.File
 	filename string
+	done     chan error
 }
 
 func (wc putWriteCloser) Write(p []byte) (n int, err error) {
@@ -57,21 +58,19 @@ func (wc putWriteCloser) Close() error {
 
 	err := os.Rename(tmpfilename, wc.filename)
 	if err != nil {
-		err := os.Remove(tmpfilename)
-		if err != nil {
-			return err
-		}
+		os.Remove(tmpfilename)
 	}
-	return nil
+	wc.done <- err
+	return err
 }
 
-func (ls *LocalStorage) Put(hash string) (w io.WriteCloser, e error) {
+func (ls *LocalStorage) Put(hash string, done chan error) (w io.WriteCloser, e error) {
 	outfile, err := ioutil.TempFile(ls.tmpSubdir, "asink")
 	if err != nil {
 		return nil, err
 	}
 
-	w = putWriteCloser{outfile, path.Join(ls.storageDir, hash)}
+	w = putWriteCloser{outfile, path.Join(ls.storageDir, hash), done}
 
 	return
 }
