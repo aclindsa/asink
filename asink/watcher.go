@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"syscall"
 )
 
 func StartWatching(watchDir string, fileUpdates chan *asink.Event, initialWalkComplete chan int) {
@@ -23,6 +24,11 @@ func StartWatching(watchDir string, fileUpdates chan *asink.Event, initialWalkCo
 		if info.IsDir() {
 			err = watcher.Watch(path)
 			if err != nil {
+				if e, ok := err.(syscall.Errno); ok && e == 28 {
+					//If we reach here, it means we've received ENOSPC from the Linux kernel:
+					//ENOSPC The user limit on the total number of inotify watches was reached or the kernel failed to allocate a needed resource.
+					panic("Exhausted the allowed number of inotify watches, please increase /proc/sys/fs/inotify/max_user_watches")
+				}
 				panic("Failed to watch " + path)
 			}
 		} else if info.Mode().IsRegular() {
@@ -46,6 +52,11 @@ func StartWatching(watchDir string, fileUpdates chan *asink.Event, initialWalkCo
 						//Note: even though filepath.Walk will visit root, we must watch root first so we catch files/directories created after the walk begins but before this directory begins being watched
 						err = watcher.Watch(ev.Name)
 						if err != nil {
+							if e, ok := err.(syscall.Errno); ok && e == 28 {
+								//If we reach here, it means we've received ENOSPC from the Linux kernel:
+								//ENOSPC The user limit on the total number of inotify watches was reached or the kernel failed to allocate a needed resource.
+								panic("Exhausted the allowed number of inotify watches, please increase /proc/sys/fs/inotify/max_user_watches")
+							}
 							panic("Failed to watch " + ev.Name)
 						}
 						//scan this directory to ensure any file events we missed before starting to watch this directory are caught

@@ -69,3 +69,19 @@ At this point in its development, the most notable `asink' subcommand is
 client is doing. At the moment, these statistics are rather rough, but if
 you're interested in knowing when all your files are done synchronizing `asink
 status' will do the trick.
+
+
+Debugging
+=========
+
+If you run into issues with your system failing to watch directories, check the
+currently allowed number of inotify watches:
+
+$ cat /proc/sys/fs/inotify/max_user_watches
+
+To increase the number of allowed watches, increase the number reported, and
+write it back out as root (you will need to consult your distribution to
+identify a permanent method for fixing the number of allowed watches, as this
+will only change it until your next reboot):
+
+$ echo 100000 > /proc/sys/fs/inotify/max_user_watches
