@@ -7,7 +7,7 @@ package main
 import (
 	"code.google.com/p/goconf/conf"
 	"errors"
-	"github.com/jlaffaye/goftp"
+	"github.com/jlaffaye/ftp"
 	"io"
 	"strconv"
 )
