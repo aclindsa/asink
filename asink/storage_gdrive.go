@@ -107,7 +107,6 @@ func NewGDriveStorage(config *conf.ConfigFile) (*GDriveStorage, error) {
 	return gs, nil
 }
 
-func (gs *GDriveStorage) Put(hash string) (w io.WriteCloser, e error) {
 func (gs *GDriveStorage) Put(hash string, done chan error) (w io.WriteCloser, e error) {
 
 	//TODO detect duplicates and don't re-upload this file if it already exists
