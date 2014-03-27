@@ -25,14 +25,7 @@ var rpcSock string
 var adb *AsinkDB
 
 func init() {
-	var err error
-
 	eventsRegexp = regexp.MustCompile("^/events/([0-9]+)$")
-
-	adb, err = GetAndInitDB()
-	if err != nil {
-		panic(err)
-	}
 
 	asink.SetupCleanExitOnSignals()
 }
@@ -41,6 +34,7 @@ const sock_usage = "Socket to use to connect to the Asink server."
 const sock_default = "/var/run/asink/asinkd.sock"
 
 func StartServer(args []string) {
+	var err error
 	const port_usage = "Port on which to serve HTTP API"
 
 	flags := flag.NewFlagSet("start", flag.ExitOnError)
@@ -49,6 +43,11 @@ func StartServer(args []string) {
 	flags.StringVar(&rpcSock, "sock", sock_default, sock_usage)
 	flags.StringVar(&rpcSock, "s", sock_default, sock_usage+" (shorthand)")
 	flags.Parse(args)
+
+	adb, err = GetAndInitDB()
+	if err != nil {
+		panic(err)
+	}
 
 	rpcTornDown := make(chan int)
 	go StartRPC(rpcSock, rpcTornDown, adb)
